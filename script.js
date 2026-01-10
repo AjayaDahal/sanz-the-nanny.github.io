@@ -41,38 +41,58 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Contact Form Handler
+// Contact Form Handler with EmailJS
 const contactForm = document.getElementById('contactForm');
+const formStatus = document.getElementById('form-status');
+
+// Initialize EmailJS with your Public Key
+// IMPORTANT: Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key
+emailjs.init('YOUR_PUBLIC_KEY');
+
 if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
+        // Disable submit button to prevent multiple submissions
+        const submitButton = contactForm.querySelector('.submit-button');
+        const originalButtonText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Sending...';
+        
         // Get form data
-        const formData = new FormData(contactForm);
-        const name = formData.get('name');
-        const email = formData.get('email');
-        const phone = formData.get('phone');
-        const message = formData.get('message');
+        const formData = {
+            name: contactForm.name.value,
+            email: contactForm.email.value,
+            phone: contactForm.phone.value || 'Not provided',
+            message: contactForm.message.value
+        };
         
-        // Create mailto link
-        const subject = encodeURIComponent(`Childcare Inquiry from ${name}`);
-        const body = encodeURIComponent(
-            `Name: ${name}\n` +
-            `Email: ${email}\n` +
-            `Phone: ${phone || 'Not provided'}\n\n` +
-            `Message:\n${message}`
-        );
-        
-        const mailtoLink = `mailto:chaulagainsanskriti83@gmail.com?subject=${subject}&body=${body}`;
-        
-        // Open email client
-        window.location.href = mailtoLink;
-        
-        // Show confirmation message
-        alert('Thank you for your message! Your email client will open to send your inquiry.');
-        
-        // Reset form
-        contactForm.reset();
+        // Send email using EmailJS
+        // IMPORTANT: Replace 'YOUR_SERVICE_ID' and 'YOUR_TEMPLATE_ID' with your actual IDs
+        emailjs.send('YOUR_SERVICE_IDservice_55a20c8', 'template_4mmj1cr', formData)
+            .then(() => {
+                // Success
+                formStatus.textContent = '✓ Message sent successfully! I\'ll get back to you soon.';
+                formStatus.className = 'form-status success';
+                contactForm.reset();
+                
+                // Hide success message after 5 seconds
+                setTimeout(() => {
+                    formStatus.textContent = '';
+                    formStatus.className = 'form-status';
+                }, 5000);
+            })
+            .catch((error) => {
+                // Error
+                console.error('EmailJS Error:', error);
+                formStatus.textContent = '✗ Failed to send message. Please try again or email directly.';
+                formStatus.className = 'form-status error';
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
+            });
     });
 }
 
