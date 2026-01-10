@@ -46,8 +46,8 @@ const contactForm = document.getElementById('contactForm');
 const formStatus = document.getElementById('form-status');
 
 // Initialize EmailJS with your Public Key
-// IMPORTANT: Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key
-emailjs.init('YOUR_PUBLIC_KEY');
+// Get your public key from: https://dashboard.emailjs.com/admin/account
+emailjs.init('YtGb5LRcLlCrzcku6');
 
 if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
@@ -68,10 +68,11 @@ if (contactForm) {
         };
         
         // Send email using EmailJS
-        // IMPORTANT: Replace 'YOUR_SERVICE_ID' and 'YOUR_TEMPLATE_ID' with your actual IDs
-        emailjs.send('YOUR_SERVICE_IDservice_55a20c8', 'template_4mmj1cr', formData)
-            .then(() => {
+        console.log('Attempting to send email with data:', formData);
+        emailjs.send('service_55a20c8', 'template_4mmj1cr', formData)
+            .then((response) => {
                 // Success
+                console.log('Email sent successfully!', response);
                 formStatus.textContent = '✓ Message sent successfully! I\'ll get back to you soon.';
                 formStatus.className = 'form-status success';
                 contactForm.reset();
@@ -84,8 +85,20 @@ if (contactForm) {
             })
             .catch((error) => {
                 // Error
-                console.error('EmailJS Error:', error);
-                formStatus.textContent = '✗ Failed to send message. Please try again or email directly.';
+                console.error('EmailJS Error Details:', error);
+                console.error('Error status:', error.status);
+                console.error('Error text:', error.text);
+                
+                let errorMessage = '✗ Failed to send message. ';
+                if (error.status === 403 || error.status === 401) {
+                    errorMessage += 'Authentication failed. Check your EmailJS credentials.';
+                } else if (error.text) {
+                    errorMessage += error.text;
+                } else {
+                    errorMessage += 'Please try again or email directly.';
+                }
+                
+                formStatus.textContent = errorMessage;
                 formStatus.className = 'form-status error';
             })
             .finally(() => {
