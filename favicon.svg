@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="12" fill="#ff6b9d"/>
+  
+  <!-- Child figure -->
+  <g transform="translate(32, 32)">
+    <!-- Head -->
+    <circle cx="0" cy="-8" r="7" fill="white"/>
+    <!-- Body -->
+    <ellipse cx="0" cy="3" rx="6" ry="9" fill="white"/>
+    <!-- Arms -->
+    <path d="M -6 1 Q -10 3 -9 7" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M 6 1 Q 10 3 9 7" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <!-- Legs -->
+    <path d="M -3 10 L -4 17" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M 3 10 L 4 17" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Heart above child -->
+  <path d="M 32 12 C 32 9 29 6 26 6 C 23.5 6 22 8 21 10 C 20 8 18.5 6 16 6 C 13 6 10 9 10 12 C 10 17 21 24 21 24 C 21 24 32 17 32 12 Z" fill="#ffa07a"/>
+  
+  <!-- Letter S in corner -->
+  <text x="46" y="56" font-family="'Poppins', sans-serif" font-size="20" font-weight="700" fill="white" opacity="0.9">
+    S
+  </text>
+</svg>
