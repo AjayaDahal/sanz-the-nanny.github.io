@@ -35,7 +35,7 @@ Edit the `index.html` file in the testimonials section to add real testimonials 
 ## Contact Information
 - **Name:** Sanskriti Chaulagain (Sanz)
 - **Phone:** 316-304-3808
-- **Email:** chaulagainsanskriti83@gmail.com
+- **Email:** sanz.the.nanny@gmail.com
 
 ## License
 © 2026 Sanskriti Chaulagain. All rights reserved.

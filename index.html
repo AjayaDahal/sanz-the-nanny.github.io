@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Scroll progress bar -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
@@ -23,6 +26,7 @@
                 <li><a href="#qualifications">Qualifications</a></li>
                 <li><a href="#gallery">Gallery</a></li>
                 <li><a href="#testimonials">Testimonials</a></li>
+                <li><a href="#book-trial">Book Trial</a></li>
                 <li><a href="#contact">Contact</a></li>
             </ul>
             <div class="hamburger">
@@ -209,6 +213,84 @@
         </div>
     </section>
 
+    <!-- Book a Trial Section -->
+    <section id="book-trial" class="book-trial">
+        <div class="container">
+            <h2 class="section-title">Book a Trial Session</h2>
+            <p class="trial-subtitle">I'm currently accepting new families! Schedule a free trial session to see if we're a great fit.</p>
+            
+            <div class="trial-content">
+                <!-- Calendar -->
+                <div class="trial-calendar-wrap">
+                    <div class="calendar-header">
+                        <button class="cal-nav" id="cal-prev">&#10094;</button>
+                        <h3 id="cal-month-year"></h3>
+                        <button class="cal-nav" id="cal-next">&#10095;</button>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="cal-day-label">Sun</div>
+                        <div class="cal-day-label">Mon</div>
+                        <div class="cal-day-label">Tue</div>
+                        <div class="cal-day-label">Wed</div>
+                        <div class="cal-day-label">Thu</div>
+                        <div class="cal-day-label">Fri</div>
+                        <div class="cal-day-label">Sat</div>
+                        <div id="cal-days"></div>
+                    </div>
+                    <div class="calendar-legend">
+                        <span class="legend-item"><span class="legend-dot available"></span> Available</span>
+                        <span class="legend-item"><span class="legend-dot booked"></span> Booked</span>
+                        <span class="legend-item"><span class="legend-dot selected"></span> Selected</span>
+                    </div>
+                </div>
+
+                <!-- Booking Form -->
+                <div class="trial-form-wrap">
+                    <form id="trialBookingForm">
+                        <h3 class="form-heading">Your Information</h3>
+                        <input type="text" name="parent_name" placeholder="Parent/Guardian Name *" required>
+                        <input type="email" name="email" placeholder="Email Address *" required>
+                        <input type="tel" name="phone" placeholder="Phone Number *" required>
+                        
+                        <h3 class="form-heading">Child Information</h3>
+                        <div id="children-fields">
+                            <div class="child-row">
+                                <input type="text" name="child_name_1" placeholder="Child's Name *" required>
+                                <input type="number" name="child_age_1" placeholder="Age" min="0" max="17">
+                            </div>
+                        </div>
+                        <button type="button" class="add-child-btn" id="addChildBtn">+ Add Another Child</button>
+
+                        <h3 class="form-heading">Trial Details</h3>
+                        <div class="selected-date-display">
+                            <span id="selectedDateText">Please select a date from the calendar</span>
+                        </div>
+                        <input type="hidden" name="selected_date" id="selectedDateInput">
+                        
+                        <select name="preferred_time" required>
+                            <option value="">Preferred Time *</option>
+                            <option value="8:00 AM">8:00 AM</option>
+                            <option value="9:00 AM">9:00 AM</option>
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="11:00 AM">11:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="1:00 PM">1:00 PM</option>
+                            <option value="2:00 PM">2:00 PM</option>
+                            <option value="3:00 PM">3:00 PM</option>
+                            <option value="4:00 PM">4:00 PM</option>
+                            <option value="5:00 PM">5:00 PM</option>
+                        </select>
+
+                        <textarea name="notes" placeholder="Tell me about your family and childcare needs..." rows="4"></textarea>
+
+                        <button type="submit" class="submit-button trial-submit">Request Trial Session</button>
+                        <div id="trial-form-status" class="form-status"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Contact Section -->
     <section id="contact" class="contact">
         <div class="container">
@@ -227,7 +309,7 @@
                         <div class="contact-icon">✉️</div>
                         <div>
                             <h3>Email</h3>
-                            <a href="mailto:chaulagainsanskriti83@gmail.com">chaulagainsanskriti83@gmail.com</a>
+                            <a href="mailto:sanz.the.nanny@gmail.com">sanz.the.nanny@gmail.com</a>
                         </div>
                     </div>
                     <div class="contact-item">
@@ -270,8 +352,23 @@
         </div>
     </footer>
 
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <!-- Shared Config (placeholders replaced at build time) -->
+    <script src="js/env.js" onerror=""></script>
+    <script src="js/firebase-config.js?v=7"></script>
+
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="script.js"></script>
+
+    <!-- Analytics Tracker (writes to Firebase RTDB) -->
+    <script src="js/tracker.js?v=8"></script>
+
+    <!-- Booking Calendar -->
+    <script src="js/booking-calendar.js?v=8"></script>
+
+    <script src="script.js?v=7"></script>
 </body>
 </html>

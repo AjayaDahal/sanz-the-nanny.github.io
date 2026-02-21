@@ -1,0 +1,6 @@
+# Local env (never commit credentials)
+.env
+js/env.js
+
+# Internal reference docs (not needed in production)
+docs/

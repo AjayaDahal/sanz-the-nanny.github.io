@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Contract — Sanz the Nanny</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #fce4ec 0%, #fff0f5 50%, #ffe0eb 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 2rem;
+      color: #c44569;
+    }
+    .header p {
+      color: #888;
+      margin-top: 4px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(196,69,105,0.1);
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 1.2rem;
+      color: #c44569;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .detail-grid .label {
+      font-size: 0.8rem;
+      color: #999;
+      text-transform: uppercase;
+    }
+    .detail-grid .value {
+      font-weight: 500;
+    }
+    .clause {
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+      line-height: 1.6;
+    }
+    .clause:last-child { border-bottom: none; }
+    .clause-number {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: #ff6b9d;
+      color: #fff;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-size: 0.8rem;
+      margin-right: 10px;
+      vertical-align: top;
+    }
+    .sign-area {
+      text-align: center;
+    }
+    .sign-area label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .sign-area input {
+      width: 100%;
+      max-width: 400px;
+      padding: 10px 16px;
+      border: 2px solid #f0e0e8;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      margin-bottom: 15px;
+    }
+    .sign-area input:focus {
+      outline: none;
+      border-color: #ff6b9d;
+    }
+    canvas#signaturePad {
+      display: block;
+      margin: 0 auto 15px;
+      border: 2px solid #f0e0e8;
+      border-radius: 12px;
+      background: #fefefe;
+      cursor: crosshair;
+      max-width: 100%;
+      touch-action: none;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 30px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #ff6b9d, #c44569);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,107,157,0.4); }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid #ddd;
+      color: #888;
+    }
+    .btn-outline:hover { border-color: #ff6b9d; color: #ff6b9d; }
+    .status-banner {
+      text-align: center;
+      padding: 40px;
+      font-size: 1.3rem;
+    }
+    .status-banner .icon {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #f0e0e8;
+      border-top-color: #ff6b9d;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { color: #e74c3c; }
+    .success { color: #2ecc71; }
+    @media(max-width:600px) {
+      .detail-grid { grid-template-columns: 1fr; }
+      canvas#signaturePad { width: 100%; height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌸 Sanz the Nanny</h1>
+      <p>Service Agreement</p>
+    </div>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading contract...</p>
+    </div>
+
+    <div id="contract-view" style="display:none;">
+      <!-- Service Details -->
+      <div class="card">
+        <h2>📋 Service Details</h2>
+        <div class="detail-grid">
+          <div><div class="label">Client</div><div class="value" id="s-client">—</div></div>
+          <div><div class="label">Service Type</div><div class="value" id="s-service">—</div></div>
+          <div><div class="label">Rate</div><div class="value" id="s-rate">—</div></div>
+          <div><div class="label">Schedule</div><div class="value" id="s-schedule">—</div></div>
+          <div><div class="label">Start Date</div><div class="value" id="s-start">—</div></div>
+          <div><div class="label">Date Sent</div><div class="value" id="s-sent">—</div></div>
+        </div>
+      </div>
+
+      <!-- Clauses -->
+      <div class="card">
+        <h2>📝 Terms & Conditions</h2>
+        <div id="s-clauses"></div>
+      </div>
+
+      <!-- Download -->
+      <div class="card" style="text-align:center;">
+        <button class="btn btn-outline" onclick="downloadSigningPDF()" id="btn-download-contract">📄 Download Contract PDF</button>
+      </div>
+
+      <!-- Signature -->
+      <div class="card sign-area" id="sign-section">
+        <h2 style="justify-content:center;">✍️ Your Signature</h2>
+        <label for="signer-name">Full Name</label>
+        <input type="text" id="signer-name" placeholder="Enter your full name" required>
+        <label>Draw your signature below</label>
+        <canvas id="signaturePad" width="500" height="250"></canvas>
+        <div class="btn-row">
+          <button class="btn btn-outline" onclick="clearPad()">Clear</button>
+          <button class="btn btn-primary" onclick="submitSignature()">Sign & Submit</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="status-view" style="display:none;" class="card status-banner"></div>
+  </div>
+
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Local env (gitignored, won't exist in prod) -->
+  <script src="../js/env.js" onerror=""></script>
+  <script src="../js/firebase-config.js?v=7"></script>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    const canvas = document.getElementById('signaturePad');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let paths = [];
+    let loadedContract = null;  // stored for PDF download
+    let loadedSigning = null;
+
+    /* ── Signature pad ── */
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      if (e.touches) {
+        return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY };
+      }
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+
+    canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); });
+    canvas.addEventListener('mouseup', () => { drawing = false; });
+    canvas.addEventListener('mouseleave', () => { drawing = false; });
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); }, { passive: false });
+    canvas.addEventListener('touchend', () => { drawing = false; });
+
+    function clearPad() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function isPadEmpty() {
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] > 0) return false;
+      }
+      return true;
+    }
+
+    /* ── Load contract ── */
+    async function init() {
+      // Initialize Firebase first
+      if (typeof initFirebase === 'function') {
+        initFirebase();
+      }
+
+      if (!token) {
+        showStatus('error', '❌', 'Invalid Link', 'No signing token provided. Please use the link from your email.');
+        return;
+      }
+
+      if (!firebaseReady) {
+        showStatus('error', '⚠️', 'Service Unavailable', 'Unable to connect to the service. Please try again later.');
+        return;
+      }
+
+      try {
+        const snap = await fbOnce('/signing/' + token);
+        const data = snap.val();
+
+        if (!data) {
+          showStatus('error', '❌', 'Contract Not Found', 'This signing link is invalid or has expired.');
+          return;
+        }
+
+        if (data.status === 'signed') {
+          showStatus('success', '✅', 'Already Signed', 'This contract was signed on ' + new Date(data.signed_at).toLocaleDateString() + ' by ' + (data.signer_name || 'the client') + '.');
+          return;
+        }
+
+        // Load the associated contract
+        const contractSnap = await fbOnce('/contracts/' + data.contract_key);
+        const contract = contractSnap.val();
+
+        if (!contract) {
+          showStatus('error', '❌', 'Contract Not Found', 'The associated contract could not be loaded.');
+          return;
+        }
+
+        // Store for PDF
+        loadedContract = contract;
+        loadedSigning = data;
+
+        // Populate details
+        document.getElementById('s-client').textContent = contract.client_name || '—';
+        document.getElementById('s-service').textContent = contract.service_type || '—';
+        document.getElementById('s-rate').textContent = contract.rate ? '$' + contract.rate : '—';
+        document.getElementById('s-schedule').textContent = contract.schedule || '—';
+        document.getElementById('s-start').textContent = contract.start_date || '—';
+        document.getElementById('s-sent').textContent = contract.sent_at ? new Date(contract.sent_at).toLocaleDateString() : '—';
+
+        // Populate clauses
+        const clausesContainer = document.getElementById('s-clauses');
+        const clauses = contract.clauses || [];
+        const enabledClauses = clauses.filter(c => c.enabled !== false);
+
+        if (enabledClauses.length === 0) {
+          clausesContainer.innerHTML = '<p style="color:#999;">No terms specified.</p>';
+        } else {
+          let html = '';
+          enabledClauses.forEach((clause, i) => {
+            html += '<div class="clause"><span class="clause-number">' + (i + 1) + '</span>' +
+              '<strong>' + (clause.title || '') + '</strong><br>' +
+              '<span style="color:#666;">' + (clause.body || clause.text || '') + '</span></div>';
+          });
+          clausesContainer.innerHTML = html;
+        }
+
+        // Pre-fill signer name
+        if (data.client_name) {
+          document.getElementById('signer-name').value = data.client_name;
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('contract-view').style.display = 'block';
+
+      } catch (err) {
+        console.error('Error loading contract:', err);
+        showStatus('error', '⚠️', 'Error', 'Failed to load the contract. Please try again.');
+      }
+    }
+
+    /* ── Submit signature ── */
+    async function submitSignature() {
+      const name = document.getElementById('signer-name').value.trim();
+      if (!name) { alert('Please enter your full name.'); return; }
+      if (isPadEmpty()) { alert('Please draw your signature.'); return; }
+
+      const signatureData = canvas.toDataURL('image/png');
+
+      try {
+        await fbUpdate('/signing/' + token, {
+          signer_name: name,
+          signature_data: signatureData,
+          signed_at: new Date().toISOString(),
+          status: 'signed'
+        });
+
+        // Also update the contract status
+        const sigSnap = await fbOnce('/signing/' + token);
+        const sigData = sigSnap.val();
+        if (sigData && sigData.contract_key) {
+          await fbUpdate('/contracts/' + sigData.contract_key, { status: 'signed', signed_at: new Date().toISOString() });
+
+          // Sync contract dates to the linked client record
+          try {
+            const contractSnap = await fbOnce('/contracts/' + sigData.contract_key);
+            const contractData = contractSnap.val();
+            if (contractData && contractData.client_key) {
+              const dateUpdate = { updated_at: new Date().toISOString() };
+              if (contractData.start_date) dateUpdate.contract_start = contractData.start_date;
+              if (contractData.end_date) dateUpdate.contract_end = contractData.end_date;
+              if (contractData.service_type) dateUpdate.service_type = contractData.service_type;
+              if (contractData.schedule) dateUpdate.schedule = contractData.schedule;
+              await fbUpdate('/clients/' + contractData.client_key, dateUpdate);
+            }
+          } catch (syncErr) {
+            console.warn('Could not sync contract dates to client:', syncErr);
+          }
+        }
+
+        document.getElementById('contract-view').style.display = 'none';
+        // Update local data so PDF shows signed info
+        loadedSigning.signer_name = name;
+        loadedSigning.signature_data = signatureData;
+        loadedSigning.signed_at = new Date().toISOString();
+        loadedSigning.status = 'signed';
+        showStatus('success', '✅', 'Contract Signed!', 'Thank you, ' + name + '! Your signed contract has been submitted. Sanz will be in touch shortly.\n');
+
+      } catch (err) {
+        console.error('Submit error:', err);
+        alert('Failed to submit signature. Please try again.');
+      }
+    }
+
+    function showStatus(type, icon, title, message) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('contract-view').style.display = 'none';
+      const el = document.getElementById('status-view');
+      el.style.display = 'block';
+      el.innerHTML = '<div class="icon">' + icon + '</div>' +
+        '<div class="' + type + '" style="font-weight:600;">' + title + '</div>' +
+        '<p style="color:#888;margin-top:8px;">' + message + '</p>' +
+        (loadedContract ? '<div style="margin-top:18px;"><button class="btn btn-outline" onclick="downloadSigningPDF()">📄 Download Contract PDF</button></div>' : '');
+    }
+
+    /* ── Download Contract as PDF ── */
+    function downloadSigningPDF() {
+      if (!loadedContract) { alert('Contract data not loaded.'); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxWidth = pageWidth - 2 * margin;
+      let y = 20;
+
+      function checkPage(needed) {
+        if (y + needed > pageHeight - 25) { doc.addPage(); y = 20; }
+      }
+
+      const c = loadedContract;
+      const s = loadedSigning || {};
+
+      // ── Header ──
+      doc.setFillColor(255, 107, 157);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont(undefined, 'bold');
+      doc.text('Nanny Service Agreement', margin, 28);
+      y = 50;
+
+      // ── Status badge ──
+      const status = s.status === 'signed' ? 'SIGNED' : (c.status || 'DRAFT').toUpperCase();
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Status: ' + status, pageWidth - margin - 40, 48);
+      y = 55;
+
+      // ── Parties ──
+      doc.setTextColor(30, 30, 46);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Service Provider:', margin, y);
+      doc.setFont(undefined, 'normal');
+      doc.text('Sanskriti Chaulagain (Sanz)', margin + 50, y);
+      y += 8;
+      doc.setFont(undefined, 'bold');
+      doc.text('Client:', margin, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(c.client_name || '—', margin + 50, y);
+      y += 8;
+      doc.setFont(undefined, 'bold');
+      doc.text('Email:', margin, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(c.client_email || '—', margin + 50, y);
+      y += 15;
+
+      // ── Service Details box ──
+      doc.setFillColor(255, 240, 245);
+      doc.roundedRect(margin, y, maxWidth, 35, 3, 3, 'F');
+      doc.setFontSize(11);
+      const detailY = y + 10;
+      doc.setFont(undefined, 'bold');
+      doc.text('Service:', margin + 5, detailY);
+      doc.setFont(undefined, 'normal');
+      doc.text(c.service_type || '—', margin + 32, detailY);
+      doc.setFont(undefined, 'bold');
+      doc.text('Rate:', margin + 5, detailY + 10);
+      doc.setFont(undefined, 'normal');
+      doc.text(c.rate ? '$' + c.rate : '—', margin + 32, detailY + 10);
+      doc.setFont(undefined, 'bold');
+      doc.text('Schedule:', margin + 5, detailY + 20);
+      doc.setFont(undefined, 'normal');
+      doc.text(c.schedule || '—', margin + 35, detailY + 20);
+      if (c.start_date) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Start Date:', pageWidth / 2, detailY);
+        doc.setFont(undefined, 'normal');
+        doc.text(c.start_date, pageWidth / 2 + 35, detailY);
+      }
+      y += 50;
+
+      // ── Clauses ──
+      const clauses = (c.clauses || []).filter(cl => cl.enabled !== false);
+      clauses.forEach(function(clause, i) {
+        checkPage(30);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(196, 69, 105);
+        doc.text((i + 1) + '. ' + (clause.title || ''), margin, y);
+        y += 7;
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(60, 60, 60);
+        doc.setFontSize(10);
+        var lines = doc.splitTextToSize(clause.body || clause.text || '', maxWidth);
+        lines.forEach(function(line) {
+          checkPage(7);
+          doc.text(line, margin, y);
+          y += 5.5;
+        });
+        y += 8;
+      });
+
+      // ── Client Signature area ──
+      checkPage(60);
+      y += 10;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, y, margin + 100, y);
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Client Signature', margin, y + 5);
+
+      if (s.status === 'signed' && s.signer_name) {
+        doc.setFontSize(12);
+        doc.setTextColor(30, 30, 60);
+        doc.setFont(undefined, 'italic');
+        doc.text(s.signer_name, margin + 5, y - 5);
+
+        if (s.signature_data) {
+          try {
+            doc.addImage(s.signature_data, 'PNG', margin, y - 35, 60, 28);
+          } catch (_) { /* image add can fail in some cases, just skip */ }
+        }
+
+        y += 10;
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text('Signed by: ' + s.signer_name, margin, y);
+        y += 5;
+        doc.text('Date: ' + new Date(s.signed_at).toLocaleDateString(), margin, y);
+      } else {
+        y += 10;
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text('Date: _______________', margin, y);
+      }
+
+      // ── Footer ──
+      y = pageHeight - 15;
+      doc.setFontSize(8);
+      doc.setTextColor(180, 180, 180);
+      doc.text('Sanz the Nanny — Austin, TX — sanz.the.nanny@gmail.com', pageWidth / 2, y, { align: 'center' });
+
+      var clientName = (c.client_name || 'Contract').replace(/\s+/g, '-');
+      doc.save('Sanz-Contract-' + clientName + '.pdf');
+    }
+
+    init();
+  </script>
+</body>
+</html>

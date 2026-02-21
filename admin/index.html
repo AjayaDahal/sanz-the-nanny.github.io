@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sanz Admin Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- jsPDF for contracts/invoices -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ─── Variables — matches the sanz-the-nanny theme ─── */
+:root {
+  --bg:          #12121e;
+  --bg-card:     #1e1e30;
+  --bg-card-hover: #282844;
+  --bg-surface:  #2a2a42;
+  --text:        #f0e6ef;
+  --text-muted:  #a89aab;
+  --text-dim:    #706070;
+  --pink:        #ff6b9d;
+  --pink-dark:   #c44569;
+  --pink-glow:   rgba(255,107,157,0.25);
+  --salmon:      #ffa07a;
+  --green:       #4caf50;
+  --green-light: #81c784;
+  --red:         #ef5350;
+  --yellow:      #ffd54f;
+  --blue:        #42a5f5;
+  --purple:      #ab47bc;
+  --border:      rgba(255,255,255,0.07);
+  --radius:      16px;
+  --radius-sm:   10px;
+  --shadow:      0 8px 32px rgba(0,0,0,0.4);
+  --shadow-sm:   0 2px 12px rgba(0,0,0,0.25);
+  --font:        'Poppins', sans-serif;
+  --sidebar-w:   250px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font); background: var(--bg); color: var(--text);
+  line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--pink); text-decoration: none; }
+a:hover { color: var(--salmon); }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 3px; }
+
+/* ─── Auth Overlay ─── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: radial-gradient(ellipse at 50% 30%, #2a1a3e 0%, #12121e 70%);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1.5rem;
+}
+.auth-overlay.hidden { display: none; }
+.auth-overlay h1 { font-size: 2.2rem; color: var(--pink); letter-spacing: -0.5px; }
+.auth-overlay p { color: var(--text-muted); font-size: 0.95rem; }
+.btn-google {
+  padding: 14px 40px; border-radius: 50px; border: none;
+  background: linear-gradient(135deg, var(--pink), var(--pink-dark));
+  color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+  font-family: var(--font); transition: all 0.3s;
+  box-shadow: 0 4px 20px var(--pink-glow);
+}
+.btn-google:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--pink-glow); }
+.auth-loading { display: none; color: var(--text-muted); }
+.auth-error { display: none; color: var(--red); background: rgba(239,83,80,0.1); padding: 12px 20px; border-radius: var(--radius-sm); max-width: 500px; text-align: center; }
+
+/* ─── Layout: Sidebar + Main ─── */
+.app { display: none; }
+.app.visible { display: flex; min-height: 100vh; }
+
+.sidebar {
+  background: #161624; display: flex; flex-direction: column;
+  border-right: 1px solid var(--border); position: fixed;
+  width: var(--sidebar-w); height: 100vh;
+  overflow-y: auto; z-index: 100;
+}
+
+.sidebar-logo {
+  padding: 1.5rem 1.5rem 1.25rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.sidebar-logo img { height: 36px; filter: brightness(0) invert(1); }
+.sidebar-logo .logo-text { display: flex; flex-direction: column; }
+.sidebar-logo .logo-title { font-weight: 600; font-size: 0.95rem; color: var(--text); line-height: 1.2; }
+.sidebar-logo span { font-size: 0.7rem; color: var(--text-dim); }
+
+.sidebar-nav { flex: 1; padding: 0.75rem 0; }
+.sidebar-nav button {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 1.5rem;
+  background: none; border: none; color: var(--text-muted); font-size: 0.9rem;
+  font-family: var(--font); cursor: pointer; transition: all 0.2s; text-align: left;
+  border-left: 3px solid transparent; position: relative;
+}
+.sidebar-nav button:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+.sidebar-nav button.active {
+  background: rgba(255,107,157,0.08); color: var(--pink);
+  border-left-color: var(--pink); font-weight: 500;
+}
+.sidebar-nav button span { font-size: 1.1rem; width: 24px; text-align: center; }
+
+.sidebar-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
+.sidebar-footer .auth-user {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;
+}
+.sidebar-footer .auth-user img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); }
+.btn-logout {
+  width: 100%; padding: 9px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: none; color: var(--text-dim); font-family: var(--font); cursor: pointer;
+  transition: all 0.2s; font-size: 0.85rem;
+}
+.btn-logout:hover { background: rgba(239,83,80,0.08); color: var(--red); border-color: rgba(239,83,80,0.3); }
+
+/* ─── Main Content ─── */
+.main {
+  margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem;
+  min-height: 100vh; max-width: 100%;
+}
+
+.panel { display: none; animation: fadeIn 0.3s ease; }
+.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.panel-header { margin-bottom: 1.75rem; }
+.panel-header h2 { font-size: 1.6rem; color: var(--text); font-weight: 600; letter-spacing: -0.3px; }
+.panel-header p { color: var(--text-muted); margin-top: 2px; font-size: 0.9rem; }
+
+/* ─── KPI Cards ─── */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1rem; margin-bottom: 1.75rem;
+}
+.kpi-card {
+  background: var(--bg-card); border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border); transition: all 0.3s;
+  display: flex; align-items: flex-start; gap: 1rem; position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, var(--pink), var(--pink-dark));
+  border-radius: 0 2px 2px 0; opacity: 0; transition: opacity 0.3s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.kpi-card:hover::before { opacity: 1; }
+.kpi-icon {
+  width: 48px; height: 48px; border-radius: 12px; display: flex;
+  align-items: center; justify-content: center; font-size: 1.4rem;
+  flex-shrink: 0; background: rgba(255,107,157,0.1);
+}
+.kpi-icon.green { background: rgba(76,175,80,0.12); }
+.kpi-icon.blue { background: rgba(66,165,245,0.12); }
+.kpi-icon.yellow { background: rgba(255,213,79,0.12); }
+.kpi-icon.purple { background: rgba(171,71,188,0.12); }
+.kpi-info { flex: 1; min-width: 0; }
+.kpi-val { font-size: 1.75rem; font-weight: 700; color: var(--pink); line-height: 1.1; }
+.kpi-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; }
+.kpi-sub { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
+
+/* ─── Cards & Tables ─── */
+.card {
+  background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem;
+  border: 1px solid var(--border); margin-bottom: 1.25rem;
+}
+.card h3 {
+  color: var(--text); margin-bottom: 1rem; font-size: 0.95rem;
+  font-weight: 600; display: flex; align-items: center; gap: 8px;
+  padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+}
+.card h3 .card-icon { color: var(--pink); font-size: 1.1rem; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left; padding: 10px 12px; color: var(--text-dim); font-weight: 500;
+  font-size: 0.8rem; border-bottom: 1px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.data-table tr:hover td { background: rgba(255,107,157,0.03); }
+
+/* ─── Badges ─── */
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.7rem;
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge-pending { background: rgba(255,213,79,0.12); color: var(--yellow); }
+.badge-accepted { background: rgba(76,175,80,0.12); color: var(--green-light); }
+.badge-declined { background: rgba(239,83,80,0.12); color: var(--red); }
+.badge-active { background: rgba(76,175,80,0.12); color: var(--green-light); }
+.badge-inactive { background: rgba(158,143,160,0.12); color: var(--text-muted); }
+.badge-draft { background: rgba(158,143,160,0.12); color: var(--text-muted); }
+.badge-sent { background: rgba(66,165,245,0.12); color: var(--blue); }
+.badge-signed { background: rgba(76,175,80,0.12); color: var(--green-light); }
+.badge-paid { background: rgba(76,175,80,0.12); color: var(--green-light); }
+.badge-unpaid { background: rgba(255,213,79,0.12); color: var(--yellow); }
+.badge-new { background: rgba(255,107,157,0.12); color: var(--pink); }
+.badge-contacted { background: rgba(66,165,245,0.12); color: var(--blue); }
+.badge-converted { background: rgba(76,175,80,0.12); color: var(--green-light); }
+.badge-overdue { background: rgba(239,83,80,0.12); color: var(--red); }
+.badge-expired { background: rgba(255,152,0,0.12); color: #ff9800; }
+.client-card.expired { opacity: 0.65; }
+
+/* ─── Buttons ─── */
+.btn {
+  padding: 8px 18px; border-radius: var(--radius-sm); border: none; font-family: var(--font);
+  font-weight: 500; cursor: pointer; font-size: 0.88rem; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: white; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 15px var(--pink-glow); }
+.btn-success { background: var(--green); color: white; }
+.btn-success:hover { box-shadow: 0 3px 12px rgba(76,175,80,0.3); }
+.btn-danger { background: var(--red); color: white; }
+.btn-danger:hover { box-shadow: 0 3px 12px rgba(239,83,80,0.3); }
+.btn-outline { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+.btn-outline:hover { border-color: var(--pink); color: var(--pink); background: rgba(255,107,157,0.05); }
+.btn-sm { padding: 5px 12px; font-size: 0.78rem; border-radius: 8px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ─── Forms ─── */
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; color: var(--text-muted); font-size: 0.82rem; margin-bottom: 4px; font-weight: 500; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 0.92rem;
+  transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--pink); box-shadow: 0 0 0 3px var(--pink-glow);
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* ─── Calendar (Admin) ─── */
+.grid-cal { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.25rem; }
+.admin-cal { background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem; border: 1px solid var(--border); }
+.admin-cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.admin-cal-header h3 { color: var(--pink); font-size: 1.1rem; }
+.admin-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+#admin-cal-days { display: contents; }
+.admin-cal-day-label { text-align: center; color: var(--text-dim); font-size: 0.75rem; padding: 6px 0; font-weight: 600; text-transform: uppercase; }
+.admin-cal-day {
+  padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; position: relative; gap: 2px;
+}
+.admin-cal-day:hover { background: var(--bg-card-hover); }
+.admin-cal-day.today { border: 2px solid var(--pink); }
+.admin-cal-day.has-events { background: rgba(255,107,157,0.06); }
+.admin-cal-day .event-dots { display: flex; gap: 2px; }
+.admin-cal-day .event-dot { width: 5px; height: 5px; border-radius: 50%; }
+.admin-cal-day .event-dot.trial { background: var(--yellow); }
+.admin-cal-day .event-dot.session { background: var(--green); }
+.admin-cal-day .event-dot.blocked { background: var(--red); }
+.admin-cal-day .event-dot.client { background: var(--pink); }
+.admin-cal-day .event-dot.override { background: var(--blue); }
+
+/* Chart containers */
+.chart-container { position: relative; height: 280px; }
+.chart-container canvas { max-height: 100%; }
+
+/* ─── Booking List Items ─── */
+.booking-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; margin-bottom: 1rem; transition: all 0.3s;
+}
+.booking-card:hover { border-color: rgba(255,107,157,0.3); box-shadow: 0 2px 12px rgba(255,107,157,0.08); }
+.booking-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.booking-card-header h4 { color: var(--text); font-size: 1rem; }
+.booking-card-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.9rem; color: var(--text-muted); }
+.booking-card-details strong { color: var(--text); }
+.booking-card-actions { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+
+/* ─── Client Cards ─── */
+.client-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; transition: all 0.3s; cursor: pointer;
+}
+.client-card:hover { border-color: rgba(255,107,157,0.3); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+
+/* ─── Contract / Invoice Builder ─── */
+.clause-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 1rem; margin-bottom: 0.75rem; transition: all 0.2s;
+}
+.clause-card.disabled { opacity: 0.5; }
+.clause-card-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.clause-card-header h4 { flex: 1; font-size: 0.95rem; }
+.clause-toggle { position: relative; width: 44px; height: 24px; }
+.clause-toggle input { opacity: 0; width: 0; height: 0; }
+.clause-toggle .slider {
+  position: absolute; inset: 0; background: var(--text-dim); border-radius: 24px; cursor: pointer; transition: 0.3s;
+}
+.clause-toggle .slider::before {
+  content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: 0.3s;
+}
+.clause-toggle input:checked + .slider { background: var(--pink); }
+.clause-toggle input:checked + .slider::before { transform: translateX(20px); }
+.clause-body { margin-top: 0.75rem; }
+.clause-body textarea {
+  width: 100%; min-height: 80px; padding: 10px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+  font-family: var(--font); font-size: 0.9rem; resize: vertical;
+}
+
+.invoice-item-row {
+  display: grid; grid-template-columns: 2fr 80px 100px 100px 40px; gap: 8px;
+  align-items: center; margin-bottom: 8px;
+}
+.invoice-item-row input {
+  padding: 8px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 0.9rem;
+}
+.invoice-totals { text-align: right; margin-top: 1rem; font-size: 0.95rem; }
+.invoice-totals .total-line { display: flex; justify-content: flex-end; gap: 2rem; padding: 4px 0; }
+.invoice-totals .grand-total { font-size: 1.2rem; font-weight: 700; color: var(--pink); border-top: 2px solid var(--border); padding-top: 8px; margin-top: 6px; }
+
+/* ─── Activity Feed ─── */
+.activity-item {
+  display: flex; gap: 12px; align-items: flex-start; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-icon {
+  width: 36px; height: 36px; border-radius: 10px; display: flex;
+  align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0;
+  background: rgba(255,107,157,0.08);
+}
+.activity-text { font-size: 0.88rem; color: var(--text); }
+.activity-time { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
+
+/* ─── Analytics Bar Chart ─── */
+.analytics-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.analytics-bar-row .bar-label { flex: 0 0 120px; font-size: 0.85rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.analytics-bar-row .bar-track { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.analytics-bar-row .bar-fill { height: 100%; border-radius: 4px; background: var(--pink); transition: width 0.5s ease; }
+.analytics-bar-row .bar-fill.referrer { background: var(--salmon); }
+.analytics-bar-row .bar-value { flex: 0 0 40px; text-align: right; font-size: 0.85rem; color: var(--text); font-weight: 600; }
+
+/* ─── Firebase Warning ─── */
+.fb-warning {
+  display: none; background: rgba(239,83,80,0.06); border: 1px solid rgba(239,83,80,0.25);
+  border-radius: var(--radius); padding: 1rem 1.5rem; margin-bottom: 1.5rem;
+}
+.fb-warning h4 { color: var(--red); margin-bottom: 4px; font-size: 0.9rem; }
+.fb-warning p { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ─── Loading / Empty States ─── */
+.loading { text-align: center; padding: 2.5rem; color: var(--text-dim); font-size: 0.85rem; }
+.loading::after {
+  content: ''; display: block; width: 28px; height: 28px; margin: 0.75rem auto 0;
+  border: 2.5px solid var(--border); border-top-color: var(--pink);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-dim); }
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.7; }
+.empty-state p { font-size: 0.85rem; }
+
+/* ─── Responsive: Tablet ─── */
+@media (max-width: 1200px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 220px; }
+  .main { padding: 1.5rem; }
+  .grid-2, .grid-3, .grid-cal { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* ─── Responsive: Mobile ─── */
+@media (max-width: 768px) {
+  .app.visible { flex-direction: column; }
+  .sidebar {
+    position: fixed; bottom: 0; top: auto; left: 0; width: 100%; height: auto;
+    flex-direction: row; padding: 0; border-right: none;
+    border-top: 1px solid var(--border); overflow-x: auto; overflow-y: hidden;
+    background: #161624; z-index: 200;
+  }
+  .sidebar-logo, .sidebar-footer { display: none; }
+  .sidebar-nav { display: flex; flex-direction: row; width: 100%; }
+  .sidebar-nav button {
+    flex: 1; flex-direction: column; padding: 8px 6px; font-size: 0.65rem; gap: 2px;
+    white-space: nowrap; border-left: none; text-align: center; justify-content: center;
+    min-width: 0;
+  }
+  .sidebar-nav button span { font-size: 1.2rem; }
+  .sidebar-nav button.active { border-left: none; border-top: 2px solid var(--pink); background: rgba(255,107,157,0.06); }
+  .main { margin-left: 0; margin-bottom: 72px; padding: 1rem; }
+  .panel-header h2 { font-size: 1.3rem; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .kpi-card { padding: 1rem; gap: 0.75rem; }
+  .kpi-icon { width: 40px; height: 40px; font-size: 1.1rem; border-radius: 10px; }
+  .kpi-val { font-size: 1.4rem; }
+  .kpi-label { font-size: 0.72rem; }
+  .booking-card-details { grid-template-columns: 1fr; }
+  .invoice-item-row { grid-template-columns: 1fr 1fr; }
+  .analytics-bar-row .bar-label { flex: 0 0 80px; font-size: 0.75rem; }
+  .chart-container { height: 220px; }
+}
+
+@media (max-width: 420px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi-card { gap: 0.75rem; }
+  .invoice-item-row { grid-template-columns: 1fr; }
+}
+
+/* ─── Client Grid & Cards v2 ─── */
+.client-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem;
+}
+.client-card { display: flex; flex-direction: column; }
+.client-card-top { cursor: pointer; flex: 1; }
+.client-card-stats {
+  display: flex; gap: 1rem; margin-top: 0.75rem; padding-top: 0.6rem;
+  border-top: 1px dashed var(--border); font-size: 0.8rem; color: var(--text-dim);
+}
+.client-card-actions {
+  display: flex; gap: 6px; margin-top: 0.75rem; padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── Client Profile ─── */
+.cp-header { margin-bottom: 1.5rem; }
+.cp-header-main {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 0.75rem;
+}
+.cp-header-main h2 { font-size: 1.4rem; color: var(--text); }
+.cp-contact {
+  display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.9rem; color: var(--text-muted);
+}
+.cp-tabs {
+  display: flex; gap: 4px; border-bottom: 2px solid var(--border);
+  margin-bottom: 1.25rem; margin-top: 1.5rem;
+}
+.cp-tab-btn {
+  padding: 10px 20px; background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--text-dim); font-family: var(--font); font-size: 0.9rem;
+  cursor: pointer; transition: all 0.2s; margin-bottom: -2px; border-radius: 8px 8px 0 0;
+}
+.cp-tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+.cp-tab-btn.active {
+  color: var(--pink); border-bottom-color: var(--pink); font-weight: 500;
+  background: rgba(255,107,157,0.05);
+}
+.cp-tab-content { display: none; animation: fadeIn 0.25s ease; }
+.cp-tab-content.active { display: block; }
+
+/* ─── Children Info (Profile) ─── */
+.child-info-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+}
+.child-info-name { font-weight: 600; color: var(--text); font-size: 0.95rem; }
+.child-info-name .child-age {
+  font-weight: 400; font-size: 0.8rem; color: var(--text-muted);
+  background: rgba(255,107,157,0.08); padding: 1px 8px; border-radius: 10px; margin-left: 4px;
+}
+.child-info-detail { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ─── Children Repeater (Edit Form) ─── */
+.child-row {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 1rem; margin-bottom: 0.75rem;
+}
+.child-row-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
+}
+.child-row-num { font-weight: 600; font-size: 0.9rem; color: var(--pink); }
+.child-row-fields {
+  display: grid; grid-template-columns: 1.5fr 0.7fr 1fr 1fr; gap: 0.75rem;
+}
+.child-row-fields .form-group { margin-bottom: 0; }
+
+/* ─── Linked Doc Cards (Profile) ─── */
+.linked-doc-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 1rem; margin-bottom: 0.75rem; transition: all 0.2s;
+}
+.linked-doc-card:hover { border-color: rgba(255,107,157,0.2); }
+.linked-doc-header {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
+}
+.linked-doc-date { font-size: 0.8rem; color: var(--text-dim); }
+.linked-doc-details {
+  display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);
+}
+
+/* ─── Client Invoice Summary ─── */
+.client-invoice-summary {
+  display: flex; gap: 1rem; margin-bottom: 1rem; padding: 1rem;
+  background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.cis-item { flex: 1; text-align: center; }
+.cis-label { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.cis-val { display: block; font-size: 1.2rem; font-weight: 700; margin-top: 2px; }
+
+/* ─── Client Selector ─── */
+.client-select-wrapper {
+  margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--border);
+}
+.client-select-wrapper select {
+  width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 0.92rem;
+}
+.client-select-wrapper select:focus {
+  outline: none; border-color: var(--pink); box-shadow: 0 0 0 3px var(--pink-glow);
+}
+.client-select-wrapper label {
+  display: block; color: var(--text-muted); font-size: 0.82rem; margin-bottom: 4px; font-weight: 500;
+}
+
+/* ─── Pagination Bar ─── */
+.pagination-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);
+  flex-wrap: wrap; gap: 0.75rem;
+}
+.pagination-info {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-muted);
+}
+.pagination-info select {
+  padding: 4px 8px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-family: var(--font); font-size: 0.82rem;
+  cursor: pointer;
+}
+.pagination-info select:focus { outline: none; border-color: var(--pink); }
+.pagination-btns {
+  display: flex; align-items: center; gap: 8px;
+}
+.pagination-current {
+  background: rgba(255,107,157,0.1); color: var(--pink); font-weight: 600;
+  padding: 4px 12px; border-radius: 6px; font-size: 0.82rem; min-width: 30px;
+  text-align: center;
+}
+
+/* ─── Client Profile Responsive ─── */
+@media (max-width: 768px) {
+  .client-grid { grid-template-columns: 1fr; }
+  .cp-contact { flex-direction: column; gap: 6px; }
+  .cp-tabs { overflow-x: auto; }
+  .child-row-fields { grid-template-columns: 1fr 1fr; }
+  .client-invoice-summary { flex-direction: column; gap: 0.5rem; }
+  .linked-doc-header { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .child-row-fields { grid-template-columns: 1fr; }
+}
+
+/* ─── Clickable Time Picker ─── */
+.time-picker { position: relative; }
+.time-display {
+  width: 100%; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 0.92rem;
+  cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  transition: border-color 0.2s;
+}
+.time-display:hover { border-color: rgba(255,107,157,0.4); }
+.time-display:focus { outline: none; border-color: var(--pink); box-shadow: 0 0 0 3px var(--pink-glow); }
+.time-display .tp-value { color: var(--text-muted); }
+.time-display .tp-value.has-time { color: var(--text); font-weight: 500; }
+.time-display .tp-icon { font-size: 1.1rem; }
+.tp-dropdown {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); z-index: 200; padding: 0.75rem; animation: fadeIn 0.2s ease;
+}
+.tp-dropdown.open { display: block; }
+.tp-cols { display: flex; gap: 6px; }
+.tp-col { flex: 1; }
+.tp-col-label {
+  text-align: center; font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.5px; padding-bottom: 6px; font-weight: 600;
+}
+.tp-scroll {
+  max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;
+  scrollbar-width: thin;
+}
+.tp-scroll::-webkit-scrollbar { width: 3px; }
+.tp-scroll::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+.tp-opt {
+  padding: 7px 4px; text-align: center; border-radius: 8px; font-size: 0.88rem;
+  cursor: pointer; transition: all 0.15s; color: var(--text-muted); user-select: none;
+}
+.tp-opt:hover { background: rgba(255,107,157,0.08); color: var(--text); }
+.tp-opt.selected {
+  background: var(--pink); color: white; font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255,107,157,0.3);
+}
+.tp-actions {
+  display: flex; gap: 6px; justify-content: flex-end; margin-top: 0.75rem;
+  padding-top: 0.5rem; border-top: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Auth Overlay ─── -->
+<div id="auth-overlay" class="auth-overlay">
+  <h1>🌸 Sanz Admin</h1>
+  <p>Sign in with your Google account to manage your business</p>
+  <button id="btn-google-signin" class="btn-google">Sign in with Google</button>
+  <div id="auth-loading" class="auth-loading">Signing in...</div>
+  <div id="auth-error" class="auth-error"></div>
+</div>
+
+<!-- ─── App Shell ─── -->
+<div id="app" class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="../logo.svg" alt="Sanz">
+      <div class="logo-text">
+        <span class="logo-title">Sanz the Nanny</span>
+        <span>Admin Dashboard</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="active" onclick="switchTab('dashboard')"><span>📊</span> Dashboard</button>
+      <button onclick="switchTab('bookings')"><span>📅</span> Bookings</button>
+      <button onclick="switchTab('calendar')"><span>🗓️</span> Calendar</button>
+      <button onclick="switchTab('clients')"><span>👨‍👩‍👧</span> Clients</button>
+      <button onclick="switchTab('prospects')"><span>🌱</span> Prospects</button>
+      <button onclick="switchTab('contracts')"><span>📝</span> Contracts</button>
+      <button onclick="switchTab('invoices')"><span>💰</span> Invoices</button>
+      <button onclick="switchTab('analytics')"><span>📈</span> Analytics</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="user-info" class="auth-user"></div>
+      <button id="btn-logout" class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div id="fb-warning" class="fb-warning">
+      <h4>⚠️ Firebase Not Connected</h4>
+      <p id="fb-warning-detail">Check your Firebase configuration and security rules.</p>
+    </div>
+
+    <!-- ═══════════════ DASHBOARD ═══════════════ -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="panel-header">
+        <h2>Dashboard</h2>
+        <p>Welcome back, Sanz! Here's your business overview.</p>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon yellow">⏳</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="kpi-pending">—</div>
+            <div class="kpi-label">Pending Trials</div>
+            <div class="kpi-sub">Awaiting your response</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green">👨‍👩‍👧</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="kpi-clients">—</div>
+            <div class="kpi-label">Active Clients</div>
+            <div class="kpi-sub">Current families</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon purple">💰</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="kpi-revenue">—</div>
+            <div class="kpi-label">Revenue (Month)</div>
+            <div class="kpi-sub">From paid invoices</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon blue">👁️</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="kpi-visitors">—</div>
+            <div class="kpi-label">Visitors Today</div>
+            <div class="kpi-sub" id="kpi-visitors-sub">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3><span class="card-icon">📋</span> Recent Trial Requests</h3>
+          <div id="dash-recent-bookings" class="loading">Loading bookings...</div>
+        </div>
+        <div class="card">
+          <h3><span class="card-icon">🕐</span> Recent Activity</h3>
+          <div id="dash-activity-feed" class="loading">Loading activity...</div>
+          <div id="activity-pagination" class="pagination-bar" style="display:none;">
+            <div class="pagination-info">
+              <span>Show</span>
+              <select id="activity-page-size" onchange="changeActivityPageSize(this.value)">
+                <option value="5" selected>5</option>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="100">100</option>
+              </select>
+              <span id="activity-range"></span>
+            </div>
+            <div class="pagination-btns">
+              <button class="btn btn-outline btn-sm" id="activity-prev" onclick="changeActivityPage(-1)" disabled>← Prev</button>
+              <span id="activity-page-num" class="pagination-current">1</span>
+              <button class="btn btn-outline btn-sm" id="activity-next" onclick="changeActivityPage(1)">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="card-icon">📈</span> Visitor Traffic (Last 30 Days)</h3>
+        <div class="chart-container">
+          <canvas id="chart-dash-traffic"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ BOOKINGS ═══════════════ -->
+    <div id="panel-bookings" class="panel">
+      <div class="panel-header">
+        <h2>Trial Bookings</h2>
+        <p>Manage trial session requests from families</p>
+      </div>
+
+      <div class="btn-group" style="margin-bottom:1.5rem;">
+        <button class="btn btn-outline booking-filter active" data-filter="all">All</button>
+        <button class="btn btn-outline booking-filter" data-filter="pending">Pending</button>
+        <button class="btn btn-outline booking-filter" data-filter="accepted">Accepted</button>
+        <button class="btn btn-outline booking-filter" data-filter="declined">Declined</button>
+      </div>
+
+      <div id="bookings-list" class="loading">Loading bookings...</div>
+    </div>
+
+    <!-- ═══════════════ CALENDAR ═══════════════ -->
+    <div id="panel-calendar" class="panel">
+      <div class="panel-header">
+        <h2>Calendar</h2>
+        <p>Your schedule at a glance — manage availability, sessions, and blocked time</p>
+      </div>
+
+      <div class="grid-cal">
+        <div class="admin-cal">
+          <div class="admin-cal-header">
+            <button class="btn btn-sm btn-outline" id="admin-cal-prev">◀</button>
+            <h3 id="admin-cal-title"></h3>
+            <button class="btn btn-sm btn-outline" id="admin-cal-next">▶</button>
+          </div>
+          <div class="admin-cal-grid">
+            <div class="admin-cal-day-label">Sun</div>
+            <div class="admin-cal-day-label">Mon</div>
+            <div class="admin-cal-day-label">Tue</div>
+            <div class="admin-cal-day-label">Wed</div>
+            <div class="admin-cal-day-label">Thu</div>
+            <div class="admin-cal-day-label">Fri</div>
+            <div class="admin-cal-day-label">Sat</div>
+            <div id="admin-cal-days"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" id="cal-day-details">
+            <h3><span class="card-icon">📌</span> Select a Day</h3>
+            <p class="empty-state" style="padding:1rem;">Click a day on the calendar to see events and manage availability.</p>
+          </div>
+
+          <div class="card">
+            <h3><span class="card-icon">⚡</span> Quick Add Event</h3>
+            <form id="quickEventForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Date</label>
+                  <input type="date" id="event-date" required>
+                </div>
+                <div class="form-group">
+                  <label>Type</label>
+                  <select id="event-type">
+                    <option value="session">Client Session</option>
+                    <option value="trial">Trial Session</option>
+                    <option value="blocked">Block Time</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Start Time</label>
+                  <div class="time-picker" id="tp-start">
+                    <input type="hidden" id="event-start" required>
+                    <button type="button" class="time-display" onclick="toggleTimePicker('tp-start')">
+                      <span class="tp-value">Select time</span>
+                      <span class="tp-icon">🕐</span>
+                    </button>
+                    <div class="tp-dropdown">
+                      <div class="tp-cols">
+                        <div class="tp-col">
+                          <div class="tp-col-label">Hour</div>
+                          <div class="tp-scroll" data-type="hour"></div>
+                        </div>
+                        <div class="tp-col">
+                          <div class="tp-col-label">Min</div>
+                          <div class="tp-scroll" data-type="min"></div>
+                        </div>
+                        <div class="tp-col">
+                          <div class="tp-col-label">AM/PM</div>
+                          <div class="tp-scroll" data-type="ampm"></div>
+                        </div>
+                      </div>
+                      <div class="tp-actions">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="confirmTimePicker('tp-start')">Set</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeTimePicker('tp-start')">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>End Time</label>
+                  <div class="time-picker" id="tp-end">
+                    <input type="hidden" id="event-end" required>
+                    <button type="button" class="time-display" onclick="toggleTimePicker('tp-end')">
+                      <span class="tp-value">Select time</span>
+                      <span class="tp-icon">🕐</span>
+                    </button>
+                    <div class="tp-dropdown">
+                      <div class="tp-cols">
+                        <div class="tp-col">
+                          <div class="tp-col-label">Hour</div>
+                          <div class="tp-scroll" data-type="hour"></div>
+                        </div>
+                        <div class="tp-col">
+                          <div class="tp-col-label">Min</div>
+                          <div class="tp-scroll" data-type="min"></div>
+                        </div>
+                        <div class="tp-col">
+                          <div class="tp-col-label">AM/PM</div>
+                          <div class="tp-scroll" data-type="ampm"></div>
+                        </div>
+                      </div>
+                      <div class="tp-actions">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="confirmTimePicker('tp-end')">Set</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeTimePicker('tp-end')">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Title / Notes</label>
+                <input type="text" id="event-title" placeholder="e.g., Session with the Smith family">
+              </div>
+              <button type="submit" class="btn btn-primary">Add Event</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h3><span class="card-icon">🟢</span> Set Availability</h3>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">Mark dates as available for trial bookings on the public site.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>From</label>
+                <input type="date" id="avail-from">
+              </div>
+              <div class="form-group">
+                <label>To</label>
+                <input type="date" id="avail-to">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Available Times</label>
+              <input type="text" id="avail-slots" placeholder="e.g., 9:00 AM, 10:00 AM, 2:00 PM">
+            </div>
+            <button class="btn btn-success" onclick="setAvailability()">Save Availability</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ PROSPECTS ═══════════════ -->
+    <div id="panel-prospects" class="panel">
+      <div class="panel-header">
+        <h2>Prospective Clients</h2>
+        <p>Contact form inquiries — potential families who haven't booked yet</p>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;">
+        <div class="btn-group">
+          <button class="btn btn-outline prospect-filter active" data-filter="all">All</button>
+          <button class="btn btn-outline prospect-filter" data-filter="new">New</button>
+          <button class="btn btn-outline prospect-filter" data-filter="contacted">Contacted</button>
+          <button class="btn btn-outline prospect-filter" data-filter="converted">Converted</button>
+        </div>
+      </div>
+
+      <div id="prospects-list" class="loading">Loading prospects...</div>
+    </div>
+
+    <!-- ═══════════════ CLIENTS ═══════════════ -->
+    <div id="panel-clients" class="panel">
+      <div class="panel-header">
+        <h2>Clients</h2>
+        <p>Manage your families and their information</p>
+      </div>
+
+      <!-- Toolbar -->
+      <div id="client-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;">
+        <input type="text" id="client-search" placeholder="Search clients..." oninput="refreshClients()" style="padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);width:250px;max-width:100%;">
+        <select id="client-status-filter" onchange="refreshClients()" style="padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);">
+          <option value="all">All Clients</option>
+          <option value="active" selected>Active</option>
+          <option value="inactive">Inactive / Expired</option>
+        </select>
+        <button class="btn btn-primary" onclick="openNewClientForm()">+ Add Client</button>
+      </div>
+
+      <div id="clients-list" class="loading">Loading clients...</div>
+
+      <!-- Client Profile View -->
+      <div id="client-profile" style="display:none;" data-key="">
+        <div class="card" style="margin-bottom:0;">
+          <button class="btn btn-outline btn-sm" onclick="closeClientProfile()" style="margin-bottom:1rem;">← Back to Clients</button>
+
+          <div class="cp-header">
+            <div class="cp-header-main">
+              <h2 id="cp-name"></h2>
+              <span id="cp-status" class="badge badge-active"></span>
+            </div>
+            <div class="cp-contact">
+              <span>👤 <span id="cp-parent"></span></span>
+              <span>📧 <span id="cp-email"></span></span>
+              <span>📞 <span id="cp-phone"></span></span>
+              <span>📍 <span id="cp-address"></span></span>
+            </div>
+            <div id="cp-dates" style="display:none;font-size:0.88rem;color:var(--text-muted);padding:8px 12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);margin-top:0.5rem;"></div>
+            <div class="btn-group" style="margin-top:1rem;">
+              <button class="btn btn-outline btn-sm" onclick="openClientEdit(document.getElementById('client-profile').dataset.key)">✏️ Edit Info</button>
+              <button id="cp-toggle-status" class="btn btn-outline btn-sm" onclick="toggleClientStatus(document.getElementById('client-profile').dataset.key)">⏸️ Mark Inactive</button>
+              <button id="cp-toggle-override" class="btn btn-outline btn-sm" onclick="toggleAvailabilityOverride(document.getElementById('client-profile').dataset.key)" title="Toggle calendar availability during contract dates">🔒 Override: OFF</button>
+              <button class="btn btn-outline btn-sm" onclick="createContractForClient(document.getElementById('client-profile').dataset.key)">📝 New Contract</button>
+              <button class="btn btn-outline btn-sm" onclick="createInvoiceForClient(document.getElementById('client-profile').dataset.key)">💰 New Invoice</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteClient(document.getElementById('client-profile').dataset.key)">🗑️ Delete</button>
+            </div>
+          </div>
+
+          <div class="cp-tabs">
+            <button class="cp-tab-btn active" data-tab="overview" onclick="switchClientTab('overview')">👶 Overview</button>
+            <button class="cp-tab-btn" data-tab="contracts" onclick="switchClientTab('contracts')">📝 Contracts</button>
+            <button class="cp-tab-btn" data-tab="invoices" onclick="switchClientTab('invoices')">💰 Invoices</button>
+          </div>
+
+          <!-- Tab: Overview -->
+          <div id="cp-tab-overview" class="cp-tab-content active">
+            <h4 style="color:var(--pink);margin-bottom:0.75rem;font-size:0.95rem;">👶 Children</h4>
+            <div id="cp-children-list"></div>
+            <h4 style="color:var(--pink);margin:1.25rem 0 0.5rem;font-size:0.95rem;">📝 Notes</h4>
+            <p id="cp-notes-text" style="color:var(--text-muted);font-size:0.9rem;background:var(--bg);padding:1rem;border-radius:var(--radius-sm);border:1px solid var(--border);"></p>
+          </div>
+
+          <!-- Tab: Contracts -->
+          <div id="cp-tab-contracts" class="cp-tab-content">
+            <div style="text-align:right;margin-bottom:1rem;">
+              <button class="btn btn-primary btn-sm" onclick="createContractForClient(document.getElementById('client-profile').dataset.key)">+ New Contract</button>
+            </div>
+            <div id="cp-contracts-list"></div>
+          </div>
+
+          <!-- Tab: Invoices -->
+          <div id="cp-tab-invoices" class="cp-tab-content">
+            <div style="text-align:right;margin-bottom:1rem;">
+              <button class="btn btn-primary btn-sm" onclick="createInvoiceForClient(document.getElementById('client-profile').dataset.key)">+ New Invoice</button>
+            </div>
+            <div id="cp-invoices-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Client Edit Form -->
+      <div id="client-edit-form" style="display:none;">
+        <div class="card">
+          <button class="btn btn-outline btn-sm" onclick="closeClientForm()" style="margin-bottom:1rem;">← Back</button>
+          <h3 id="client-edit-title">New Client</h3>
+          <form id="clientForm">
+            <div class="form-row">
+              <div class="form-group"><label>Family Name</label><input type="text" id="cl-family-name" required></div>
+              <div class="form-group"><label>Parent/Guardian Name</label><input type="text" id="cl-parent-name" required></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Email</label><input type="email" id="cl-email" required></div>
+              <div class="form-group"><label>Phone</label><input type="tel" id="cl-phone"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Address</label><input type="text" id="cl-address"></div>
+              <div class="form-group">
+                <label>Status</label>
+                <select id="cl-status">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <h4 style="margin:1.5rem 0 0.75rem;color:var(--pink);font-size:0.95rem;">👶 Children</h4>
+            <div id="cl-children-repeater"></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addChild()" style="margin-bottom:1.5rem;">+ Add Child</button>
+
+            <div class="form-group"><label>Notes</label><textarea id="cl-notes" rows="3" placeholder="Any notes about this family..."></textarea></div>
+            <div class="btn-group">
+              <button type="submit" class="btn btn-primary">Save Client</button>
+              <button type="button" class="btn btn-outline" onclick="closeClientForm()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ CONTRACTS ═══════════════ -->
+    <div id="panel-contracts" class="panel">
+      <div class="panel-header">
+        <h2>Contracts</h2>
+        <p>Create and manage nanny service agreements</p>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <div class="btn-group">
+          <button class="btn btn-outline contract-filter active" data-filter="all">All</button>
+          <button class="btn btn-outline contract-filter" data-filter="draft">Drafts</button>
+          <button class="btn btn-outline contract-filter" data-filter="sent">Sent</button>
+          <button class="btn btn-outline contract-filter" data-filter="signed">Signed</button>
+        </div>
+        <button class="btn btn-primary" onclick="openNewContract()">+ New Contract</button>
+      </div>
+
+      <div id="contracts-list" class="loading">Loading contracts...</div>
+
+      <!-- Contract Builder -->
+      <div id="contract-builder" style="display:none;">
+        <div class="card">
+          <h3 id="contract-builder-title">New Service Agreement</h3>
+          <form id="contractForm">
+            <div class="client-select-wrapper">
+              <label>👤 Select Client</label>
+              <select id="ct-client-select" onchange="onClientSelectChange('ct')">
+                <option value="">— Select a client or type manually below —</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Client Name</label><input type="text" id="ct-client-name" required></div>
+              <div class="form-group"><label>Client Email</label><input type="email" id="ct-client-email" required></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Service Type</label>
+                <select id="ct-service-type">
+                  <option value="Full-Time Nanny">Full-Time Nanny</option>
+                  <option value="Part-Time Nanny">Part-Time Nanny</option>
+                  <option value="After-School Care">After-School Care</option>
+                  <option value="Weekend Care">Weekend Care</option>
+                  <option value="Occasional/Date Night">Occasional/Date Night</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Rate</label><input type="text" id="ct-rate" placeholder="e.g., $20/hour or $800/week"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Start Date</label><input type="date" id="ct-start-date"></div>
+              <div class="form-group"><label>End Date (if applicable)</label><input type="date" id="ct-end-date"></div>
+            </div>
+            <div class="form-group"><label>Schedule</label><textarea id="ct-schedule" rows="2" placeholder="e.g., Monday-Friday, 8:00 AM - 5:00 PM"></textarea></div>
+            <div class="form-group"><label>Special Instructions / Notes</label><textarea id="ct-notes" rows="3"></textarea></div>
+
+            <h3 style="margin:1.5rem 0 1rem;color:var(--pink);">Contract Clauses</h3>
+            <div id="contract-clauses"></div>
+            <button type="button" class="btn btn-outline" style="margin:0.5rem 0 1rem;" onclick="addClause()">+ Add Clause</button>
+
+            <div class="btn-group" style="margin-top:1rem;">
+              <button type="submit" class="btn btn-primary">Save Contract</button>
+              <button type="button" class="btn btn-success" onclick="sendContract()">Send to Client</button>
+              <button type="button" class="btn btn-outline" onclick="downloadContractPDF()">Download PDF</button>
+              <button type="button" class="btn btn-outline" onclick="closeContractBuilder()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ INVOICES ═══════════════ -->
+    <div id="panel-invoices" class="panel">
+      <div class="panel-header">
+        <h2>Invoices</h2>
+        <p>Create, send, and track payments</p>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <div class="btn-group">
+          <button class="btn btn-outline invoice-filter active" data-filter="all">All</button>
+          <button class="btn btn-outline invoice-filter" data-filter="unpaid">Unpaid</button>
+          <button class="btn btn-outline invoice-filter" data-filter="paid">Paid</button>
+          <button class="btn btn-outline invoice-filter" data-filter="overdue">Overdue</button>
+        </div>
+        <button class="btn btn-primary" onclick="openNewInvoice()">+ New Invoice</button>
+      </div>
+
+      <div id="invoices-list" class="loading">Loading invoices...</div>
+
+      <!-- Invoice Builder -->
+      <div id="invoice-builder" style="display:none;">
+        <div class="card">
+          <h3 id="invoice-builder-title">New Invoice</h3>
+          <form id="invoiceForm">
+            <div class="client-select-wrapper">
+              <label>👤 Select Client</label>
+              <select id="inv-client-select" onchange="onClientSelectChange('inv')">
+                <option value="">— Select a client or type manually below —</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Client Name</label><input type="text" id="inv-client-name" required></div>
+              <div class="form-group"><label>Client Email</label><input type="email" id="inv-client-email" required></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Invoice Number</label><input type="text" id="inv-number" placeholder="Auto-generated" readonly></div>
+              <div class="form-group"><label>Due Date</label><input type="date" id="inv-due-date" required></div>
+            </div>
+
+            <h4 style="margin:1.25rem 0 0.75rem;color:var(--pink);">Line Items</h4>
+            <div class="invoice-item-row" style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">
+              <span>Description</span><span>Qty</span><span>Rate</span><span>Amount</span><span></span>
+            </div>
+            <div id="invoice-items"></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="addInvoiceItem()">+ Add Item</button>
+
+            <div class="invoice-totals">
+              <div class="total-line"><span>Subtotal</span><span id="inv-subtotal">$0.00</span></div>
+              <div class="total-line"><span>Tax (<input type="number" id="inv-tax-rate" value="0" min="0" max="100" style="width:50px;padding:2px 6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);text-align:center;">%)</span><span id="inv-tax">$0.00</span></div>
+              <div class="total-line grand-total"><span>Total</span><span id="inv-total">$0.00</span></div>
+            </div>
+
+            <div class="form-group" style="margin-top:1rem;"><label>Notes</label><textarea id="inv-notes" rows="2" placeholder="Payment instructions, thank you note, etc."></textarea></div>
+
+            <div class="btn-group" style="margin-top:1rem;">
+              <button type="submit" class="btn btn-primary">Save Invoice</button>
+              <button type="button" class="btn btn-success" onclick="sendInvoice()">Send to Client</button>
+              <button type="button" class="btn btn-outline" onclick="downloadInvoicePDF()">Download PDF</button>
+              <button type="button" class="btn btn-outline" onclick="closeInvoiceBuilder()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ ANALYTICS ═══════════════ -->
+    <div id="panel-analytics" class="panel">
+      <div class="panel-header">
+        <h2>Analytics</h2>
+        <p>Website traffic and business performance</p>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon blue">👁️</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="an-visitors">—</div>
+            <div class="kpi-label">Visitors Today</div>
+            <div class="kpi-sub" id="an-visitors-sub">Loading...</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon purple">📄</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="an-pageviews">—</div>
+            <div class="kpi-label">Pageviews Today</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon yellow">🔗</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="an-sessions">—</div>
+            <div class="kpi-label">Sessions Today</div>
+            <div class="kpi-sub" id="an-bounce">—</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon green">🟢</div>
+          <div class="kpi-info">
+            <div class="kpi-val" id="an-live">0</div>
+            <div class="kpi-label">Live Visitors</div>
+            <div class="kpi-sub">Right now</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3><span class="card-icon">📊</span> Traffic (Last 30 Days)</h3>
+          <div class="chart-container"><canvas id="chart-an-traffic"></canvas></div>
+        </div>
+        <div class="card">
+          <h3><span class="card-icon">🌐</span> Traffic Sources</h3>
+          <div class="chart-container"><canvas id="chart-an-sources"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3><span class="card-icon">📑</span> Top Pages</h3>
+          <div id="an-top-pages" class="loading">Loading...</div>
+        </div>
+        <div class="card">
+          <h3><span class="card-icon">🔗</span> Top Referrers</h3>
+          <div id="an-top-referrers" class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3><span class="card-icon">📱</span> Devices</h3>
+          <div class="chart-container"><canvas id="chart-an-devices"></canvas></div>
+        </div>
+        <div class="card">
+          <h3><span class="card-icon">🟢</span> Live Visitors</h3>
+          <div id="an-live-table" class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><span class="card-icon">🔻</span> Booking Funnel</h3>
+        <div class="chart-container"><canvas id="chart-an-funnel"></canvas></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── Contract Signing Page ─── -->
+<!-- Separate file: sign.html -->
+
+<!-- ─── SDKs ─── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- Local env (gitignored, won't exist in prod) -->
+<script src="../js/env.js" onerror=""></script>
+<!-- Shared Config -->
+<script src="../js/firebase-config.js?v=7"></script>
+
+<!-- Admin Modules -->
+<script src="js/admin.js?v=7"></script>
+<script src="js/bookings.js?v=7"></script>
+<script src="js/calendar-admin.js?v=8"></script>
+<script src="js/clients.js?v=8"></script>
+<script src="js/prospects.js?v=7"></script>
+<script src="js/contracts.js?v=8"></script>
+<script src="js/invoices.js?v=7"></script>
+<script src="js/analytics-admin.js?v=8"></script>
+
+</body>
+</html>

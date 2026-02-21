@@ -22,32 +22,42 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         const target = document.querySelector(this.getAttribute('href'));
         if (target) {
             const offsetTop = target.offsetTop - 70;
-            window.scrollTo({
-                top: offsetTop,
-                behavior: 'smooth'
-            });
+            // Animate scroll with custom easing
+            const start = window.pageYOffset;
+            const distance = offsetTop - start;
+            const duration = Math.min(1200, Math.max(500, Math.abs(distance) * 0.6));
+            let startTime = null;
+
+            function easeInOutCubic(t) {
+                return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            }
+
+            function animateScroll(currentTime) {
+                if (!startTime) startTime = currentTime;
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeInOutCubic(progress);
+                window.scrollTo(0, start + distance * eased);
+                if (progress < 1) requestAnimationFrame(animateScroll);
+            }
+            requestAnimationFrame(animateScroll);
         }
     });
 });
 
-// Navbar background change on scroll
-window.addEventListener('scroll', () => {
-    const navbar = document.querySelector('.navbar');
-    if (window.scrollY > 50) {
-        navbar.style.background = 'rgba(255, 255, 255, 0.98)';
-        navbar.style.backdropFilter = 'blur(10px)';
-    } else {
-        navbar.style.background = '#ffffff';
-    }
-});
+// Navbar background change is handled by the unified scroll handler below
 
 // Contact Form Handler with EmailJS
 const contactForm = document.getElementById('contactForm');
 const formStatus = document.getElementById('form-status');
 
-// Initialize EmailJS with your Public Key
-// Get your public key from: https://dashboard.emailjs.com/admin/account
-emailjs.init('YtGb5LRcLlCrzcku6');
+// Initialize EmailJS from shared config (firebase-config.js)
+// Falls back to direct init if config not available
+if (typeof EMAILJS_CONFIG !== 'undefined' && !EMAILJS_CONFIG.publicKey.startsWith('__EMAILJS')) {
+    emailjs.init(EMAILJS_CONFIG.publicKey);
+} else {
+    emailjs.init('__EMAILJS_PUBLIC_KEY__');
+}
 
 if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
@@ -67,14 +77,52 @@ if (contactForm) {
             message: contactForm.message.value
         };
         
-        // Send email using EmailJS
+        // Build admin notification email
         console.log('Attempting to send email with data:', formData);
-        emailjs.send('service_55a20c8', 'template_4mmj1cr', formData)
+        const adminBody = '<p style="font-size:15px;color:#333;">Hi Sanz,</p>' +
+          '<p style="color:#555;">You\'ve received a new inquiry from your website:</p>' +
+          '<table style="width:100%;font-size:14px;margin:16px 0;">' +
+            '<tr><td style="padding:6px 12px;font-weight:600;color:#c44569;width:80px;">Name</td><td style="padding:6px 12px;">' + formData.name + '</td></tr>' +
+            '<tr style="background:#fff5f7;"><td style="padding:6px 12px;font-weight:600;color:#c44569;">Email</td><td style="padding:6px 12px;"><a href="mailto:' + formData.email + '">' + formData.email + '</a></td></tr>' +
+            '<tr><td style="padding:6px 12px;font-weight:600;color:#c44569;">Phone</td><td style="padding:6px 12px;">' + formData.phone + '</td></tr>' +
+          '</table>' +
+          '<div style="background:#f9f9f9;padding:16px;border-radius:8px;border-left:3px solid #ff6b9d;">' +
+            '<strong style="color:#c44569;">Message:</strong>' +
+            '<p style="margin:8px 0 0;color:#444;">' + formData.message.replace(/\n/g, '<br>') + '</p>' +
+          '</div>';
+
+        sendBrandedEmail('sanz.the.nanny@gmail.com', 'New Inquiry from ' + formData.name, 'New Contact Inquiry', adminBody, null, formData.email)
             .then((response) => {
                 // Success
                 console.log('Email sent successfully!', response);
                 formStatus.textContent = '✓ Message sent successfully! I\'ll get back to you soon.';
                 formStatus.className = 'form-status success';
+
+                // Save as prospective client in Firebase
+                if (typeof firebaseReady !== 'undefined' && firebaseReady && typeof fbPush === 'function') {
+                    fbPush('/prospects', {
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        message: formData.message,
+                        source: 'contact_form',
+                        status: 'new',
+                        created_at: new Date().toISOString()
+                    }).then(() => console.log('Prospect saved'))
+                      .catch(err => console.warn('Prospect save failed:', err));
+                }
+
+                // Send auto-reply to the visitor
+                const replyBody = '<p style="font-size:15px;color:#333;">Hi ' + formData.name + ',</p>' +
+                  '<p style="color:#555;">Thank you for reaching out! I\'ve received your message and will get back to you within 24 hours.</p>' +
+                  '<div style="background:#fff5f7;padding:16px;border-radius:8px;margin:16px 0;">' +
+                    '<strong style="color:#c44569;">Your Message:</strong>' +
+                    '<p style="margin:8px 0 0;color:#444;">' + formData.message.replace(/\n/g, '<br>') + '</p>' +
+                  '</div>' +
+                  '<p style="color:#555;">Looking forward to connecting with you!</p>' +
+                  '<p style="color:#c44569;font-weight:600;">&mdash; Sanz</p>';
+                sendBrandedEmail(formData.email, 'Thanks for reaching out! - Sanz the Nanny', 'Message Received!', replyBody, 'This is an automated response.').catch(err => console.warn('Auto-reply failed:', err));
+
                 contactForm.reset();
                 
                 // Hide success message after 5 seconds
@@ -109,49 +157,99 @@ if (contactForm) {
     });
 }
 
-// Scroll animations
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
+// ── Scroll-reveal animation system ──
+(function initRevealAnimations() {
+    // Section titles
+    document.querySelectorAll('.section-title').forEach(el => el.classList.add('reveal'));
 
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
+    // Grid containers get stagger treatment
+    document.querySelectorAll('.services-grid, .gallery-grid, .testimonials-grid, .about-highlights').forEach(el => {
+        el.classList.add('reveal', 'reveal-stagger');
     });
-}, observerOptions);
 
-// Observe elements for scroll animations
-document.querySelectorAll('.service-card, .testimonial-card, .qualification-item, .gallery-item').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(30px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
-});
+    // Individual cards / items that aren't inside a stagger parent
+    document.querySelectorAll(
+        '.qualification-item, .contact-content, .trial-content, .references-note'
+    ).forEach(el => el.classList.add('reveal'));
 
-// Add active state to navigation based on scroll position
-window.addEventListener('scroll', () => {
+    // Alternate left/right for qualification items
+    document.querySelectorAll('.qualification-item').forEach((el, i) => {
+        el.classList.add(i % 2 === 0 ? 'reveal-left' : 'reveal-right');
+    });
+
+    // About image from left, text from right
+    const aboutImg = document.querySelector('.about-image');
+    const aboutTxt = document.querySelector('.about-text');
+    if (aboutImg) aboutImg.classList.add('reveal', 'reveal-left');
+    if (aboutTxt) aboutTxt.classList.add('reveal', 'reveal-right');
+
+    // Contact halves
+    const contactInfo = document.querySelector('.contact-info');
+    const contactForm = document.querySelector('.contact-form');
+    if (contactInfo) contactInfo.classList.add('reveal', 'reveal-left');
+    if (contactForm) contactForm.classList.add('reveal', 'reveal-right');
+
+    // Intersection observer that adds .revealed
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                revealObserver.unobserve(entry.target); // animate only once
+            }
+        });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+})();
+
+// ── Active nav indicator on scroll ──
+const _navLinks = document.querySelectorAll('.nav-menu a');
+const _sections = document.querySelectorAll('section[id]');
+
+function updateActiveNav() {
+    const scrollY = window.pageYOffset;
     let current = '';
-    const sections = document.querySelectorAll('section[id]');
-    
-    sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (scrollY >= (sectionTop - 100)) {
-            current = section.getAttribute('id');
-        }
+    _sections.forEach(section => {
+        if (scrollY >= section.offsetTop - 120) current = section.getAttribute('id');
     });
-    
-    document.querySelectorAll('.nav-menu a').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href') === `#${current}`) {
-            link.classList.add('active');
-        }
+    _navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
     });
-});
+}
+
+// ── Scroll progress bar ──
+const _progressBar = document.getElementById('scrollProgress');
+function updateScrollProgress() {
+    const scrollTop = window.pageYOffset;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    if (_progressBar) _progressBar.style.width = pct + '%';
+}
+
+// Unified scroll handler (throttled via rAF)
+let _scrollRAF = null;
+window.addEventListener('scroll', () => {
+    if (_scrollRAF) return;
+    _scrollRAF = requestAnimationFrame(() => {
+        updateActiveNav();
+        updateScrollProgress();
+
+        // Navbar background
+        const navbar = document.querySelector('.navbar');
+        if (window.scrollY > 50) {
+            navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+            navbar.style.backdropFilter = 'blur(10px)';
+        } else {
+            navbar.style.background = '#ffffff';
+        }
+
+        _scrollRAF = null;
+    });
+}, { passive: true });
+
+// Run once on load
+updateActiveNav();
+updateScrollProgress();
 
 // Gallery Lightbox Functionality
 const lightbox = document.getElementById('lightbox');

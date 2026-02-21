@@ -1,0 +1,92 @@
+{
+  "rules": {
+
+    // ─── Site Analytics (tracker.js) ───
+    // Public WRITE so the anonymous tracker can push data
+    // Authenticated READ so admin dashboard can display analytics
+    "site_analytics": {
+      ".read": "auth != null",
+      ".write": true
+    },
+
+    // ─── Trial Bookings ───
+    // Public READ so the booking calendar can check booked slots
+    // Public can CREATE new bookings (push), admin can update/delete
+    "trial_bookings": {
+      ".read": true,
+      "$id": {
+        ".write": "auth != null || !data.exists()"
+      }
+    },
+
+    // ─── Clients ───
+    // Public READ (booking calendar needs contract dates to block days)
+    // Public can CREATE (auto-created from booking form)
+    // Admin can update/delete existing records
+    "clients": {
+      ".read": true,
+      "$id": {
+        ".write": "auth != null || !data.exists()"
+      }
+    },
+
+    // ─── Prospects (contact form submissions) ───
+    // Admin-only READ. Public can CREATE (contact form push)
+    // Admin can update status / convert / delete
+    "prospects": {
+      ".read": "auth != null",
+      "$id": {
+        ".write": "auth != null || !data.exists()"
+      }
+    },
+
+    // ─── Contracts ───
+    // Admin reads all; public can read individual contract (signing page)
+    // Write open at $id level for admin CRUD + signing page status update
+    "contracts": {
+      ".read": "auth != null",
+      "$id": {
+        ".read": true,
+        ".write": true
+      }
+    },
+
+    // ─── Signing Tokens ───
+    // Anyone with the token URL can read the signing data & submit signature
+    "signing": {
+      ".read": true,
+      "$token": {
+        ".write": true
+      }
+    },
+
+    // ─── Invoices ───
+    // Admin only — no public access
+    "invoices": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    // ─── Calendar Events (admin schedule) ───
+    // Admin only
+    "calendar_events": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    // ─── Availability (day-of-week open slots) ───
+    // Public READ so booking calendar can show available days
+    // Admin WRITE to update availability
+    "availability": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+
+    // ─── Activity Logs ───
+    // Admin READ, anyone can push (e.g. signing events)
+    "activity_logs": {
+      ".read": "auth != null",
+      ".write": true
+    }
+  }
+}
