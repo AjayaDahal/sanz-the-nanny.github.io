@@ -73,24 +73,12 @@
         }
       });
 
-      // Load active client contract date ranges — block those days from trial bookings
+      // Load blocked dates (synced by admin when clients are saved)
       try {
-        const clientsSnap = await fbOnce('/clients/', 8000);
-        const clients = clientsSnap.val() || {};
-        clientBlockedDates = {};
-        Object.values(clients).forEach(c => {
-          // Only block if: active status, has contract dates, and no availability override
-          if ((c.status === 'active') && c.contract_start && !c.availability_override) {
-            const startDate = new Date(c.contract_start + 'T00:00:00');
-            const endDate = c.contract_end ? new Date(c.contract_end + 'T00:00:00') : new Date(year, month + 3, 0); // default 3 months ahead if no end
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-              const key = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-              clientBlockedDates[key] = true;
-            }
-          }
-        });
-      } catch (clientErr) {
-        console.warn('Could not load client dates for calendar:', clientErr.message);
+        const blockedSnap = await fbOnce('/blocked_dates/', 8000);
+        clientBlockedDates = blockedSnap.val() || {};
+      } catch (blockedErr) {
+        console.warn('Could not load blocked dates:', blockedErr.message);
       }
     } catch (err) {
       console.warn('Could not load calendar data:', err.message);

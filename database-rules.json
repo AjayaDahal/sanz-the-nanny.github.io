@@ -1,100 +1,128 @@
 {
   "rules": {
 
+    // Admin email constant for reuse
+    // auth.token.email === 'sanz.the.nanny@gmail.com'
+
     // ─── Site Analytics (tracker.js) ───
-    // Public WRITE so the anonymous tracker can push data
-    // Authenticated READ so admin dashboard can display analytics
+    // Admin reads. Public can only PUSH new data, not overwrite/delete.
     "site_analytics": {
-      ".read": "auth != null",
-      ".write": true
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
+      "$category": {
+        "$dateOrKey": {
+          ".write": true,
+          "$child": {
+            ".validate": "!data.exists()"
+          }
+        }
+      },
+      "presence": {
+        ".write": true
+      }
     },
 
     // ─── Trial Bookings ───
-    // Public READ so the booking calendar can check booked slots
-    // Public can CREATE new bookings (push), admin can update/delete
+    // Public can READ (calendar checks booked slots — only dates/status, no PII concern).
+    // Public can CREATE new bookings. Admin can update/delete.
     "trial_bookings": {
       ".read": true,
       "$id": {
-        ".write": "auth != null || !data.exists()"
+        ".write": "(auth != null && auth.token.email === 'sanz.the.nanny@gmail.com') || !data.exists()"
       }
     },
 
     // ─── Clients ───
-    // Public READ (booking calendar needs contract dates to block days)
-    // Public can CREATE (auto-created from booking form)
-    // Admin can update/delete existing records
+    // Admin-only READ/WRITE (contains PII: names, emails, phones, children).
+    // Public can CREATE new records (auto-created from booking form).
     "clients": {
-      ".read": true,
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
       "$id": {
-        ".write": "auth != null || !data.exists()"
+        ".write": "(auth != null && auth.token.email === 'sanz.the.nanny@gmail.com') || !data.exists()"
       }
     },
 
+    // ─── Blocked Dates (public-facing schedule) ───
+    // Public READ so booking calendar can check which days are unavailable.
+    // Admin-only WRITE (synced when clients are saved/updated).
+    "blocked_dates": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'"
+    },
+
     // ─── Prospects (contact form submissions) ───
-    // Admin-only READ. Public can CREATE (contact form push)
-    // Admin can update status / convert / delete
+    // Admin-only READ. Public can CREATE. Admin can update/delete.
     "prospects": {
-      ".read": "auth != null",
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
       "$id": {
-        ".write": "auth != null || !data.exists()"
+        ".write": "(auth != null && auth.token.email === 'sanz.the.nanny@gmail.com') || !data.exists()"
       }
     },
 
     // ─── Contracts ───
-    // Admin reads all; public can read individual contract (signing page)
-    // Write open at $id level for admin CRUD + signing page status update
+    // Admin reads all. Public can read individual contract (signing page).
+    // Only admin can write. Signing updates go via /signing node.
     "contracts": {
-      ".read": "auth != null",
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
       "$id": {
         ".read": true,
-        ".write": true
+        ".write": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'"
       }
     },
 
     // ─── Signing Tokens ───
-    // Anyone with the token URL can read the signing data & submit signature
+    // Anyone with the token URL can read. Public can only CREATE or UPDATE
+    // specific signing fields (signature, signed_at, status), not delete.
     "signing": {
       ".read": true,
       "$token": {
-        ".write": true
+        ".write": "(auth != null && auth.token.email === 'sanz.the.nanny@gmail.com') || !data.exists() || (data.exists() && !newData.hasChild('_deleted'))",
+        ".validate": "newData.exists()"
       }
     },
 
     // ─── Invoices ───
-    // Admin only — no public access
+    // Admin only
     "invoices": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
+      ".write": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'"
     },
 
     // ─── Calendar Events (admin schedule) ───
     // Admin only
     "calendar_events": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
+      ".write": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'"
     },
 
     // ─── Availability (day-of-week open slots) ───
-    // Public READ so booking calendar can show available days
-    // Admin WRITE to update availability
+    // Public READ so booking calendar can show available days.
+    // Admin-only WRITE.
     "availability": {
       ".read": true,
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'"
     },
 
     // ─── Activity Logs ───
-    // Admin READ, anyone can push (e.g. signing events)
+    // Admin READ. Public can only PUSH new entries, not overwrite/delete.
     "activity_logs": {
-      ".read": "auth != null",
-      ".write": true
+      ".read": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'",
+      "$id": {
+        ".write": "(auth != null && auth.token.email === 'sanz.the.nanny@gmail.com') || !data.exists()",
+        ".validate": "newData.exists()"
+      }
     },
 
     // ─── Settings (trial toggle etc.) ───
-    // Public READ so public pages can check flags
-    // Admin-only WRITE
+    // Public READ so public pages can check flags. Admin-only WRITE.
     "settings": {
       ".read": true,
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.email === 'sanz.the.nanny@gmail.com'"
+    },
+
+    // ─── Deny everything else by default ───
+    "$other": {
+      ".read": false,
+      ".write": false
     }
   }
 }

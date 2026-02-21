@@ -534,6 +534,7 @@ document.getElementById('clientForm').addEventListener('submit', async function 
     }
     closeClientForm();
     refreshClients();
+    syncBlockedDates();
   } catch (err) {
     alert('Failed to save: ' + err.message);
   }
@@ -554,6 +555,7 @@ async function toggleClientStatus(key) {
     await fbUpdate('/clients/' + key, { status: newStatus, updated_at: new Date().toISOString() });
     logActivity('client_status', (newStatus === 'inactive' ? 'Deactivated' : 'Re-activated') + ' client: ' + (client.family_name || client.parent_name), 'client');
     await refreshClients();
+    syncBlockedDates();
     openClientProfile(key);
   } catch (err) {
     alert('Failed: ' + err.message);
@@ -575,6 +577,7 @@ async function toggleAvailabilityOverride(key) {
     await fbUpdate('/clients/' + key, { availability_override: newVal, updated_at: new Date().toISOString() });
     logActivity('client_override', (newVal ? 'Enabled' : 'Disabled') + ' availability override for ' + (client.family_name || client.parent_name), 'client');
     await refreshClients();
+    syncBlockedDates();
     openClientProfile(key);
   } catch (err) {
     alert('Failed: ' + err.message);
@@ -588,6 +591,7 @@ async function deleteClient(key) {
     logActivity('client_deleted', 'Deleted client', 'client');
     closeClientProfile();
     refreshClients();
+    syncBlockedDates();
   } catch (err) {
     alert('Failed to delete: ' + err.message);
   }
@@ -603,6 +607,33 @@ function esc(str) {
 
 function escAttr(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ── Sync blocked dates to public /blocked_dates node ── */
+async function syncBlockedDates() {
+  if (!firebaseReady) return;
+  try {
+    const snap = await fbOnce('/clients/');
+    const clients = snap.val() || {};
+    const blocked = {};
+    Object.values(clients).forEach(function(c) {
+      if ((c.status === 'active') && c.contract_start && !c.availability_override) {
+        const start = new Date(c.contract_start + 'T00:00:00');
+        const end = c.contract_end
+          ? new Date(c.contract_end + 'T00:00:00')
+          : new Date(new Date().getFullYear(), new Date().getMonth() + 3, 0);
+        for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          var key = d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
+          blocked[key] = true;
+        }
+      }
+    });
+    await fbSet('/blocked_dates', blocked);
+  } catch (e) {
+    console.warn('[Clients] Failed to sync blocked dates:', e);
+  }
 }
 
 // Search binding
