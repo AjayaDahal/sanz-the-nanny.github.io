@@ -344,6 +344,16 @@ a:hover { color: var(--salmon); }
 .activity-text { font-size: 0.88rem; color: var(--text); }
 .activity-time { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
 
+/* ─── Analytics Range Picker ─── */
+.an-range-picker { display: flex; gap: 6px; margin-bottom: 1rem; }
+.an-range-btn {
+  padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text-muted); font-size: 0.8rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.an-range-btn:hover { border-color: var(--pink); color: var(--text); }
+.an-range-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+
 /* ─── Analytics Bar Chart ─── */
 .analytics-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .analytics-bar-row .bar-label { flex: 0 0 120px; font-size: 0.85rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1245,12 +1255,18 @@ a:hover { color: var(--salmon); }
         <p>Website traffic and business performance</p>
       </div>
 
+      <div class="an-range-picker">
+        <button class="an-range-btn" data-days="1" onclick="setAnalyticsRange(1)">Today</button>
+        <button class="an-range-btn active" data-days="7" onclick="setAnalyticsRange(7)">7 Days</button>
+        <button class="an-range-btn" data-days="30" onclick="setAnalyticsRange(30)">30 Days</button>
+      </div>
+
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-icon blue">👁️</div>
           <div class="kpi-info">
             <div class="kpi-val" id="an-visitors">—</div>
-            <div class="kpi-label">Visitors Today</div>
+            <div class="kpi-label" id="an-visitors-label">Visitors (Last 7d)</div>
             <div class="kpi-sub" id="an-visitors-sub">Loading...</div>
           </div>
         </div>
@@ -1258,14 +1274,14 @@ a:hover { color: var(--salmon); }
           <div class="kpi-icon purple">📄</div>
           <div class="kpi-info">
             <div class="kpi-val" id="an-pageviews">—</div>
-            <div class="kpi-label">Pageviews Today</div>
+            <div class="kpi-label" id="an-pageviews-label">Pageviews (Last 7d)</div>
           </div>
         </div>
         <div class="kpi-card">
           <div class="kpi-icon yellow">🔗</div>
           <div class="kpi-info">
             <div class="kpi-val" id="an-sessions">—</div>
-            <div class="kpi-label">Sessions Today</div>
+            <div class="kpi-label" id="an-sessions-label">Sessions (Last 7d)</div>
             <div class="kpi-sub" id="an-bounce">—</div>
           </div>
         </div>
@@ -1343,7 +1359,7 @@ a:hover { color: var(--salmon); }
 <script src="js/prospects.js?v=10"></script>
 <script src="js/contracts.js?v=8"></script>
 <script src="js/invoices.js?v=7"></script>
-<script src="js/analytics-admin.js?v=8"></script>
+<script src="js/analytics-admin.js?v=9"></script>
 
 </body>
 </html>
