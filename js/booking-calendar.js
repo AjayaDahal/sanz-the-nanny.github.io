@@ -109,6 +109,12 @@
 
     let html = '';
 
+    // Day-of-week labels (generated in JS to avoid display:contents — Safari compat)
+    const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    for (let i = 0; i < 7; i++) {
+      html += '<div class="cal-day-label">' + DAY_LABELS[i] + '</div>';
+    }
+
     // Empty cells before day 1
     for (let i = 0; i < firstDay; i++) {
       html += '<div class="cal-day empty"></div>';
