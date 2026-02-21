@@ -92,32 +92,38 @@ async function markProspectContacted(key) {
 
 async function convertProspectToClient(key) {
   const prospect = prospectsCache.find(p => p._key === key);
-  if (!prospect) return;
+  if (!prospect) { alert('Prospect not found in cache. Please refresh and try again.'); return; }
+  if (!firebaseReady) { alert('Firebase not connected'); return; }
 
   if (!confirm('Convert "' + (prospect.name || 'this prospect') + '" to a client?')) return;
 
   try {
     // Create client record
-    await fbPush('/clients', {
-      family_name: prospect.name,
-      parent_name: prospect.name,
-      email: prospect.email,
-      phone: prospect.phone !== 'Not provided' ? prospect.phone : '',
+    const clientData = {
+      family_name: prospect.name || '',
+      parent_name: prospect.name || '',
+      email: prospect.email || '',
+      phone: (prospect.phone && prospect.phone !== 'Not provided') ? prospect.phone : '',
       children: [],
       notes: 'Converted from prospect. Original message: ' + (prospect.message || '—'),
       status: 'active',
       source: 'prospect_conversion',
       created_at: new Date().toISOString()
-    });
+    };
+    await fbPush('/clients', clientData);
 
     // Update prospect status
     await fbUpdate('/prospects/' + key, { status: 'converted', converted_at: new Date().toISOString() });
 
     logActivity('prospect_converted', 'Converted prospect to client: ' + prospect.name, 'prospect');
-    refreshProspects();
-    alert('✅ ' + prospect.name + ' has been added as a client!');
+
+    alert('✅ ' + (prospect.name || 'Prospect') + ' has been added as a client!');
+
+    // Navigate to clients tab so the user can see the new client
+    switchTab('clients');
   } catch (err) {
-    alert('Failed: ' + err.message);
+    console.error('[Prospects] Convert error:', err);
+    alert('Failed to convert prospect: ' + err.message);
   }
 }
 

@@ -55,6 +55,11 @@ async function refreshBookings(filter) {
       } else if (b.status === 'accepted') {
         html += '<div class="booking-card-actions"><div class="btn-group">' +
           '<button class="btn btn-outline btn-sm" onclick="convertToClient(\'' + b._key + '\')">→ Add as Client</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="cancelBooking(\'' + b._key + '\')">✗ Cancel</button>' +
+          '</div></div>';
+      } else if (b.status === 'declined' || b.status === 'cancelled') {
+        html += '<div class="booking-card-actions"><div class="btn-group">' +
+          '<button class="btn btn-outline btn-sm" onclick="deleteBooking(\'' + b._key + '\')">🗑️ Delete</button>' +
           '</div></div>';
       }
 
@@ -131,16 +136,93 @@ async function declineBooking(key) {
   }
 }
 
-function convertToClient(bookingKey) {
+async function cancelBooking(key) {
+  const reason = prompt('Reason for cancelling (optional):');
+  if (reason === null) return; // user pressed Cancel on prompt
+  try {
+    await fbUpdate('/trial_bookings/' + key, {
+      status: 'cancelled',
+      cancel_reason: reason || '',
+      updated_at: new Date().toISOString()
+    });
+    logActivity('booking_cancelled', 'Cancelled trial booking: ' + key, 'booking');
+
+    // Send cancellation email
+    const snap = await fbOnce('/trial_bookings/' + key);
+    const booking = snap.val();
+    if (booking && booking.email && typeof sendBrandedEmail === 'function') {
+      const body = '<p style="font-size:15px;color:#333;">Hi ' + (booking.parent_name || '') + ',</p>' +
+        '<p style="color:#555;">Unfortunately, your trial session has been <strong style="color:#e53935;">cancelled</strong>.</p>' +
+        '<div style="background:#fff5f7;padding:16px;border-radius:8px;margin:16px 0;">' +
+          '<p style="margin:4px 0;"><strong>Date:</strong> ' + (booking.selected_date || '—') + '</p>' +
+          '<p style="margin:4px 0;"><strong>Time:</strong> ' + (booking.preferred_time || '—') + '</p>' +
+          (reason ? '<p style="margin:4px 0;"><strong>Reason:</strong> ' + reason + '</p>' : '') +
+        '</div>' +
+        '<p style="color:#555;">I apologize for the inconvenience. Please feel free to book another trial session at a time that works for you!</p>' +
+        '<p style="color:#c44569;font-weight:600;">&mdash; Sanz</p>';
+      sendBrandedEmail(booking.email, 'Trial Session Cancelled - Sanz the Nanny', 'Session Cancelled', body, 'Reply to this email to reschedule.').catch(e => console.warn('Cancel email failed:', e));
+    }
+
+    refreshBookings();
+  } catch (err) {
+    console.error('Cancel booking error:', err);
+    alert('Failed to cancel booking: ' + err.message);
+  }
+}
+
+async function deleteBooking(key) {
+  if (!confirm('Delete this booking permanently? This cannot be undone.')) return;
+  try {
+    await fbRemove('/trial_bookings/' + key);
+    logActivity('booking_deleted', 'Deleted trial booking: ' + key, 'booking');
+    refreshBookings();
+  } catch (err) {
+    alert('Failed to delete: ' + err.message);
+  }
+}
+
+async function convertToClient(bookingKey) {
   const booking = bookingsCache.find(b => b._key === bookingKey);
-  if (!booking) return;
-  // Switch to clients tab and prefill form
-  switchTab('clients');
-  openNewClientForm();
-  document.getElementById('cl-parent-name').value = booking.parent_name || '';
-  document.getElementById('cl-email').value = booking.email || '';
-  document.getElementById('cl-phone').value = booking.phone || '';
-  if (booking.children && booking.children.length) {
-    document.getElementById('cl-children').value = JSON.stringify(booking.children, null, 2);
+  if (!booking) { alert('Booking not found. Please refresh and try again.'); return; }
+  if (!firebaseReady) { alert('Firebase not connected'); return; }
+  if (!confirm('Add "' + (booking.parent_name || 'this family') + '" as a client?')) return;
+
+  try {
+    // Build children array
+    const children = (booking.children || []).map(c => ({
+      name: c.name || '', age: c.age || '', allergies: c.allergies || '', notes: c.notes || ''
+    }));
+
+    // Create client record directly
+    const clientData = {
+      family_name: booking.parent_name || '',
+      parent_name: booking.parent_name || '',
+      email: booking.email || '',
+      phone: booking.phone || '',
+      children: children,
+      notes: 'Converted from trial booking on ' + (booking.selected_date || '—') +
+        (booking.notes ? '. Notes: ' + booking.notes : ''),
+      status: 'active',
+      source: 'trial_booking',
+      created_at: new Date().toISOString()
+    };
+    await fbPush('/clients', clientData);
+
+    // Mark booking as converted
+    await fbUpdate('/trial_bookings/' + bookingKey, {
+      status: 'accepted',
+      converted_to_client: true,
+      updated_at: new Date().toISOString()
+    });
+
+    logActivity('client_created', 'Created client from trial booking: ' + (booking.parent_name || ''), 'client');
+
+    alert('✅ ' + (booking.parent_name || 'Family') + ' has been added as a client!');
+
+    // Navigate to clients tab
+    switchTab('clients');
+  } catch (err) {
+    console.error('[Bookings] Convert to client error:', err);
+    alert('Failed to create client: ' + err.message);
   }
 }
