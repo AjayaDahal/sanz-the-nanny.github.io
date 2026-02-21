@@ -312,6 +312,40 @@
   if (typeof initFirebase === 'function') {
     initFirebase();
   }
-  renderCalendar();
+
+  // Check if trial bookings are enabled
+  checkTrialAvailability();
+
+  async function checkTrialAvailability() {
+    try {
+      if (!firebaseReady) {
+        // If Firebase isn't ready yet, wait and retry
+        await new Promise(function(resolve) {
+          var tries = 0;
+          var iv = setInterval(function() {
+            tries++;
+            if (firebaseReady || tries > 20) { clearInterval(iv); resolve(); }
+          }, 500);
+        });
+      }
+      if (firebaseReady) {
+        var snap = await fbOnce('/settings/trial_bookings_enabled');
+        var enabled = snap.val();
+        if (enabled === false) {
+          // Trial bookings disabled by admin
+          var banner = document.getElementById('trial-unavailable');
+          var content = document.getElementById('trial-content-wrap');
+          var subtitle = document.querySelector('.trial-subtitle');
+          if (banner) banner.style.display = 'block';
+          if (content) content.style.display = 'none';
+          if (subtitle) subtitle.style.display = 'none';
+          return; // Don't render the calendar
+        }
+      }
+    } catch (e) {
+      console.warn('[Booking] Could not check trial availability:', e.message);
+    }
+    renderCalendar();
+  }
 
 })();

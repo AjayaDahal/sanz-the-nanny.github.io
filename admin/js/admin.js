@@ -90,7 +90,7 @@ function switchTab(tab) {
   // Trigger panel-specific refresh
   switch (tab) {
     case 'dashboard': refreshDashboard(); break;
-    case 'bookings': refreshBookings(); break;
+    case 'bookings': refreshBookings(); loadTrialToggleState(); break;
     case 'calendar': refreshAdminCalendar(); break;
     case 'clients': refreshClients(); break;
     case 'prospects': refreshProspects(); break;

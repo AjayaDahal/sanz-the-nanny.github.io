@@ -87,6 +87,14 @@
     "activity_logs": {
       ".read": "auth != null",
       ".write": true
+    },
+
+    // ─── Settings (trial toggle etc.) ───
+    // Public READ so public pages can check flags
+    // Admin-only WRITE
+    "settings": {
+      ".read": true,
+      ".write": "auth != null"
     }
   }
 }

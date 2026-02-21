@@ -383,6 +383,26 @@ a:hover { color: var(--salmon); }
 .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.7; }
 .empty-state p { font-size: 0.85rem; }
 
+/* ─── Toggle Switch ─── */
+.trial-toggle-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 1.25rem; padding: 12px 16px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+}
+.trial-toggle-row span { font-size: 0.9rem; color: var(--text-muted); }
+.toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #444; border-radius: 26px; transition: 0.3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; height: 20px; width: 20px;
+  left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--green, #2ecc71); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
 /* ─── Mobile Top Bar & Hamburger ─── */
 .mobile-topbar {
   display: none; /* hidden on desktop */
@@ -823,6 +843,14 @@ a:hover { color: var(--salmon); }
       <div class="panel-header">
         <h2>Trial Bookings</h2>
         <p>Manage trial session requests from families</p>
+      </div>
+
+      <div class="trial-toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" id="trial-enabled-toggle" onchange="toggleTrialAvailability(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+        <span id="trial-toggle-label">Trial bookings: <strong>Loading...</strong></span>
       </div>
 
       <div class="btn-group" style="margin-bottom:1.5rem;">
@@ -1352,8 +1380,8 @@ a:hover { color: var(--salmon); }
 <script src="../js/firebase-config.js?v=7"></script>
 
 <!-- Admin Modules -->
-<script src="js/admin.js?v=12"></script>
-<script src="js/bookings.js?v=10"></script>
+<script src="js/admin.js?v=13"></script>
+<script src="js/bookings.js?v=11"></script>
 <script src="js/calendar-admin.js?v=8"></script>
 <script src="js/clients.js?v=10"></script>
 <script src="js/prospects.js?v=10"></script>

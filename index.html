@@ -6,7 +6,7 @@
     <meta name="description" content="Sanskriti Chaulagain (Sanz) - Professional Nanny Services. Experienced childcare from newborns to middle schoolers. CPR certified.">
     <title>Sanz - Professional Nanny Services</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -218,8 +218,16 @@
         <div class="container">
             <h2 class="section-title">Book a Trial Session</h2>
             <p class="trial-subtitle">I'm currently accepting new families! Schedule a free trial session to see if we're a great fit.</p>
-            
-            <div class="trial-content">
+
+            <!-- Shown when admin disables trial bookings -->
+            <div id="trial-unavailable" class="trial-unavailable" style="display:none;">
+                <div class="trial-unavailable-icon">🚫</div>
+                <h3>Trial Sessions Temporarily Unavailable</h3>
+                <p>We're not accepting new trial bookings at the moment. Please check back soon or contact us directly for more information!</p>
+                <a href="#contact" class="btn-pink" style="margin-top:1rem;display:inline-block;">Contact Us</a>
+            </div>
+
+            <div id="trial-content-wrap" class="trial-content">
                 <!-- Calendar -->
                 <div class="trial-calendar-wrap">
                     <div class="calendar-header">
@@ -360,7 +368,7 @@
     <script src="js/tracker.js?v=8"></script>
 
     <!-- Booking Calendar -->
-    <script src="js/booking-calendar.js?v=9"></script>
+    <script src="js/booking-calendar.js?v=10"></script>
 
     <script src="script.js?v=7"></script>
 </body>

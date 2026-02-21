@@ -226,3 +226,32 @@ async function convertToClient(bookingKey) {
     alert('Failed to create client: ' + err.message);
   }
 }
+
+/* ── Trial Availability Toggle ── */
+async function loadTrialToggleState() {
+  try {
+    const snap = await fbOnce('/settings/trial_bookings_enabled');
+    const enabled = snap.val() !== false; // default to true if not set
+    const toggle = document.getElementById('trial-enabled-toggle');
+    const label = document.getElementById('trial-toggle-label');
+    if (toggle) toggle.checked = enabled;
+    if (label) label.innerHTML = 'Trial bookings: <strong style="color:' + (enabled ? 'var(--green,#2ecc71)' : 'var(--red,#e74c3c)') + '">' + (enabled ? 'Enabled' : 'Disabled') + '</strong>';
+  } catch (e) {
+    console.warn('[Bookings] Could not load trial toggle state:', e);
+  }
+}
+
+async function toggleTrialAvailability(enabled) {
+  if (!firebaseReady) { alert('Firebase not connected'); return; }
+  try {
+    await fbSet('/settings/trial_bookings_enabled', enabled);
+    const label = document.getElementById('trial-toggle-label');
+    if (label) label.innerHTML = 'Trial bookings: <strong style="color:' + (enabled ? 'var(--green,#2ecc71)' : 'var(--red,#e74c3c)') + '">' + (enabled ? 'Enabled' : 'Disabled') + '</strong>';
+    logActivity('settings_updated', 'Trial bookings ' + (enabled ? 'enabled' : 'disabled'), 'settings');
+  } catch (err) {
+    alert('Failed to update setting: ' + err.message);
+    // Revert toggle
+    const toggle = document.getElementById('trial-enabled-toggle');
+    if (toggle) toggle.checked = !enabled;
+  }
+}

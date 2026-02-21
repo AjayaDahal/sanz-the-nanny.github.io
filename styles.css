@@ -805,6 +805,19 @@ section {
     font-size: 1.1rem;
 }
 
+.trial-unavailable {
+    text-align: center;
+    padding: 3rem 2rem;
+    max-width: 500px;
+    margin: 0 auto 2rem;
+    background: #fff5f5;
+    border: 1px solid #ffd4d4;
+    border-radius: 16px;
+}
+.trial-unavailable-icon { font-size: 3rem; margin-bottom: 1rem; }
+.trial-unavailable h3 { color: #333; margin-bottom: 0.75rem; font-size: 1.3rem; }
+.trial-unavailable p { color: #666; line-height: 1.6; }
+
 .trial-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
